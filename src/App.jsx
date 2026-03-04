@@ -1644,7 +1644,11 @@ export default function App(){
     </div>
   </div>}
   {sec==="log"&&(()=>{
-    const q=logQ.toLowerCase();
+    const qRaw=logQ.trim();
+    const isExact=qRaw.startsWith('"')&&qRaw.endsWith('"')&&qRaw.length>1;
+    const q=isExact?qRaw.slice(1,-1).toLowerCase():qRaw.toLowerCase();
+    const qWords=isExact?null:q.split(/\s+/).filter(Boolean);
+    const matchQ=(e)=>{const hay=[(e.r||""),(e.p||""),(e.ord||""),(e.io||""),String(e.a)].join(" ").toLowerCase();if(isExact)return hay.includes(q);return qWords.every(w=>hay.includes(w));};
     const filtered=entries.filter(e=>{
       if(logCh!=="all"&&!(e.c===logCh||(logCh==="square"&&e.src==="square")))return false;
       if(logP!=="all"&&e.p!==logP)return false;
@@ -1653,7 +1657,7 @@ export default function App(){
       if(logIO==="refund"&&e.io!=="REFUND")return false;
       if(logDF&&e.d<logDF)return false;
       if(logDT&&e.d>logDT)return false;
-      if(q&&!(e.r||"").toLowerCase().includes(q)&&!(e.p||"").toLowerCase().includes(q)&&!(e.ord||"").toLowerCase().includes(q)&&!(e.io||"").toLowerCase().includes(q)&&!String(e.a).includes(q))return false;
+      if(q&&!matchQ(e))return false;
       return true;});
     const fTotal=filtered.reduce((s,e)=>s+e.a,0);
     const logPeople=[...new Set(entries.map(e=>e.p))].sort();
