@@ -2,30 +2,25 @@
 
 Business management dashboard for Unboxed TCG at Arden Fair Mall.
 
-## Files
-- `unboxed-dashboard.jsx` — Main dashboard (React component)
-- `vault.jsx` — Backup & secrets manager
-- `index.html` — Entry point (for local dev)
+## Quick Setup
 
-## How to Deploy
-
-### Option 1: Use with Claude.ai (Current)
-Just open the `.jsx` files as artifacts in Claude.ai — they run directly.
-
-### Option 2: GitHub Pages with Vite
 ```bash
-npm create vite@latest unboxed -- --template react
-cd unboxed
-# Replace src/App.jsx with unboxed-dashboard.jsx content
-# Install deps: npm install recharts papaparse
-npm run build
-# Deploy dist/ to GitHub Pages
+npm install
+npm run dev
 ```
 
-### Option 3: Quick Local Dev
-```bash
-npx serve .
-# Open http://localhost:3000
+Opens at http://localhost:3000
+
+## Project Structure
+```
+├── package.json
+├── vite.config.js
+├── index.html          ← Vite entry point
+├── src/
+│   ├── main.jsx        ← React bootstrap
+│   └── App.jsx         ← Dashboard (localStorage version)
+├── unboxed-dashboard.jsx  ← Claude.ai artifact version
+└── vault.jsx           ← Backup & secrets (Claude.ai version)
 ```
 
 ## Features
@@ -39,4 +34,3 @@ npx serve .
 - Goal tracker with milestone timestamps
 - Trade credit handling
 - Payout system with SMS notifications
-- Data backup/export via Vault app

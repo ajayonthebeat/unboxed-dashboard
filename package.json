@@ -1,0 +1,47 @@
+{
+  "name": "unboxed-dashboard",
+  "private": true,
+  "version": "1.0.17",
+  "type": "module",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "electron:dev": "concurrently \"vite --port 3000\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
+    "prebuild": "node scripts/bump-version.cjs",
+    "build": "vite build",
+    "electron:build": "vite build && electron-builder --dir",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.unboxed.dashboard",
+    "productName": "Unboxed TCG Dashboard",
+    "asar": false,
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "dir"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "dependencies": {
+    "papaparse": "^5.4.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^2.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^40.6.1",
+    "electron-builder": "^26.8.1",
+    "vite": "^5.1.0",
+    "wait-on": "^9.0.4"
+  }
+}

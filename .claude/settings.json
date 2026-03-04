@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install --save-dev cross-env)",
+      "Bash(npm run electron:build)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\ajayr\\OneDrive\\Desktop\\unboxed-dashboard"
+    ]
+  }
+}
