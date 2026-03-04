@@ -91,6 +91,15 @@ export default function App(){
   const[pwStore,sPwStore]=useState({});
   const[upStatus,sUpStatus]=useState(null);const[lastBackup,sLastBackup]=useState(null);
   const[ejsCfg,sEjsCfg]=useState({serviceId:"",templateId:"",publicKey:"",fromEmail:""});
+  const UI_DEF={accent:"#f59e0b",fontSize:"md",density:"normal",theme:"dark",tabPos:"top",hidden:{}};
+  const[uiCfg,sUiCfg]=useState(()=>{try{return{...UI_DEF,...JSON.parse(localStorage.getItem("ub-ui"))}}catch(e){return{...UI_DEF}}});
+  const setUI=(k,v)=>sUiCfg(c=>{const n={...c,[k]:v};try{localStorage.setItem("ub-ui",JSON.stringify(n))}catch(e){}return n});
+  const AC=uiCfg.accent;
+  const T=uiCfg.theme==="light"?{bg:"#f4f4f5",card:"#ffffff",border:"#d4d4d8",text:"#18181b",muted:"#71717a",subtle:"#a1a1aa",hover:"#e4e4e7",inputBg:"#f4f4f5",scheme:"light",overlay:"rgba(255,255,255,.85)",tabBg:"rgba(228,228,231,.5)",tabActive:"#d4d4d8",loginBg:"#e4e4e7",toast:"#ffffff"}:{bg:"#18181b",card:"#27272a",border:"#3f3f46",text:"#fafafa",muted:"#71717a",subtle:"#a1a1aa",hover:"#3f3f46",inputBg:"#27272a",scheme:"dark",overlay:"rgba(0,0,0,.85)",tabBg:"rgba(63,63,70,.3)",tabActive:"#3f3f46",loginBg:"#09090b",toast:"#27272a"};
+  const FM=uiCfg.fontSize==="sm"?0.85:uiCfg.fontSize==="lg"?1.15:1;
+  const fs=n=>Math.round(n*FM);
+  const DM=uiCfg.density==="compact"?0.7:uiCfg.density==="spacious"?1.3:1;
+  const ds=n=>Math.round(n*DM);
   const[zoomLvl,sZoomLvl]=useState(()=>{try{return parseFloat(localStorage.getItem("ub-zoom"))||1;}catch(e){return 1;}});
   useEffect(()=>{document.body.style.zoom=zoomLvl;},[zoomLvl]);
   useEffect(()=>{const h=e=>{if(!e.ctrlKey)return;if(e.key==="="||e.key==="+"){e.preventDefault();sZoomLvl(z=>{const n=Math.min(Math.round((z+0.1)*10)/10,2);try{localStorage.setItem("ub-zoom",String(n));}catch(x){}return n;});}
@@ -137,15 +146,6 @@ export default function App(){
       </div>
     </div>
   </div>);
-  const UI_DEF={accent:"#f59e0b",fontSize:"md",density:"normal",theme:"dark",tabPos:"top",hidden:{}};
-  const[uiCfg,sUiCfg]=useState(()=>{try{return{...UI_DEF,...JSON.parse(localStorage.getItem("ub-ui"))}}catch(e){return{...UI_DEF}}});
-  const setUI=(k,v)=>sUiCfg(c=>{const n={...c,[k]:v};try{localStorage.setItem("ub-ui",JSON.stringify(n))}catch(e){}return n});
-  const AC=uiCfg.accent;
-  const T=uiCfg.theme==="light"?{bg:"#f4f4f5",card:"#ffffff",border:"#d4d4d8",text:"#18181b",muted:"#71717a",subtle:"#a1a1aa",hover:"#e4e4e7",inputBg:"#f4f4f5",scheme:"light",overlay:"rgba(255,255,255,.85)",tabBg:"rgba(228,228,231,.5)",tabActive:"#d4d4d8",loginBg:"#e4e4e7",toast:"#ffffff"}:{bg:"#18181b",card:"#27272a",border:"#3f3f46",text:"#fafafa",muted:"#71717a",subtle:"#a1a1aa",hover:"#3f3f46",inputBg:"#27272a",scheme:"dark",overlay:"rgba(0,0,0,.85)",tabBg:"rgba(63,63,70,.3)",tabActive:"#3f3f46",loginBg:"#09090b",toast:"#27272a"};
-  const FM=uiCfg.fontSize==="sm"?0.85:uiCfg.fontSize==="lg"?1.15:1;
-  const fs=n=>Math.round(n*FM);
-  const DM=uiCfg.density==="compact"?0.7:uiCfg.density==="spacious"?1.3:1;
-  const ds=n=>Math.round(n*DM);
   const[ct,sCT]=useState("area");const[tab,sTB]=useState("home");const[cv,sCV]=useState("stacked");const[bv,sBV]=useState("grouped");const[showTot,sSTot]=useState(false);const[visCh,sVisCh]=useState(["shopify","square","cash","amex"]);const[stgExp,sStgExp]=useState(new Set());
   const[toast,sT]=useState(null);const[impItems,sII]=useState(null);const[impCh,sIC]=useState("");const[impFilter,sIF]=useState("all");
   const[stfP,sSTP]=useState(null);const[gV,sGV]=useState("cum");const[sec,sSEC]=useState("daily");
