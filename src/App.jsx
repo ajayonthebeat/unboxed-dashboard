@@ -70,7 +70,7 @@ function parseSquareCSV(t){const{data:rows}=Papa.parse(t,{header:true,skipEmptyL
   return{items,channel:"square"};}
 const TT=({active,payload,label})=>{if(!active||!payload)return null;const it=payload.filter(p=>p.value>0&&p.dataKey!=="_t"&&p.dataKey!=="_total").sort((a,b)=>b.value-a.value);const tot=it.reduce((s,p)=>s+p.value,0);
   return(<div style={{background:"#27272a",border:"1px solid #3f3f46",borderRadius:10,padding:"12px 16px",boxShadow:"0 8px 32px rgba(0,0,0,.5)",minWidth:150}}>
-    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,gap:16}}><span style={{color:"#fafafa",fontWeight:700,fontSize:12}}>{label}</span><span style={{color:"#f59e0b",fontWeight:700,fontSize:11,fontFamily:"monospace"}}>{FF(tot)}</span></div>
+    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,gap:16}}><span style={{color:"#fafafa",fontWeight:700,fontSize:12}}>{label}</span><span style={{color:AC,fontWeight:700,fontSize:11,fontFamily:"monospace"}}>{FF(tot)}</span></div>
     {it.map((p,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",gap:16,padding:"1px 0"}}><div style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:6,height:6,borderRadius:"50%",background:p.stroke||p.fill}}/><span style={{color:"#d4d4d8",fontSize:10}}>{p.dataKey}</span></div><span style={{color:"#ddd",fontFamily:"monospace",fontSize:10}}>{FF(p.value)}</span></div>))}</div>);};
 const FC={"unknown":"#ef4444","trade_credit":"#a78bfa","cash_order":"#f59e0b","device_guess":"#06b6d4","no_notes":"#666","split_order":"#ec4899","multi_item":"#818cf8","split_pay":"#f97316","refunded":"#dc2626"};
 const FL={"unknown":"⚠ Unknown","trade_credit":"💳 Trade/Credit","cash_order":"💵 Cash Only","device_guess":"📱 Device","no_notes":"📝 No Notes","split_order":"👥 Split Owner","multi_item":"📦 Multi-Item","split_pay":"💰 Split Pay","refunded":"🔴 Refunded"};
@@ -112,14 +112,14 @@ export default function App(){
   };
   const PINS={full:"2026",view:"0201"};
   const tryLogin=(pw)=>{if(pw===PINS.full){sAuthed(true);sViewOnly(false);try{localStorage.setItem("ub-auth","full");}catch(e){}}else if(pw===PINS.view){sAuthed(true);sViewOnly(true);try{localStorage.setItem("ub-auth","view");}catch(e){}}else{sLoginPw("");alert("Wrong PIN");}};
-  const loginScreen=(<div style={{minHeight:"100vh",background:"#09090b",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+  const loginScreen=(<div style={{minHeight:"100vh",background:T.loginBg,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
     <div style={{width:"100%",maxWidth:340,textAlign:"center"}}>
-      <div style={{fontSize:28,fontWeight:900,color:"#fafafa",marginBottom:4}}>UNBOXED TCG</div>
-      <div style={{color:"#52525b",fontSize:10,marginBottom:32}}>Arden Fair Mall · Sacramento</div>
-      <div style={{background:"rgba(24,24,27,.9)",borderRadius:12,padding:24,border:"1px solid #27272a"}}>
-        <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:12}}>ENTER PIN</div>
-        <input type="password" value={loginPw} onChange={e=>sLoginPw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")tryLogin(loginPw);}} placeholder="••••" style={{width:"100%",padding:"12px",borderRadius:8,border:"1px solid #3f3f46",background:"#18181b",color:"#fafafa",fontSize:18,textAlign:"center",letterSpacing:8,outline:"none",fontFamily:"monospace",marginBottom:12}}/>
-        <button onClick={()=>tryLogin(loginPw)} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:"#f59e0b",color:"#000",cursor:"pointer",fontSize:13,fontWeight:700,marginBottom:16}}>Unlock</button>
+      <div style={{fontSize:fs(28),fontWeight:900,color:T.text,marginBottom:4}}>UNBOXED TCG</div>
+      <div style={{color:T.muted,fontSize:fs(10),marginBottom:32}}>Arden Fair Mall · Sacramento</div>
+      <div style={{background:T.card,borderRadius:12,padding:ds(24),border:`1px solid ${T.border}`}}>
+        <div style={{color:T.subtle,fontSize:fs(10),fontWeight:600,letterSpacing:1,marginBottom:12}}>ENTER PIN</div>
+        <input type="password" value={loginPw} onChange={e=>sLoginPw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")tryLogin(loginPw);}} placeholder="••••" style={{width:"100%",padding:"12px",borderRadius:8,border:`1px solid ${T.border}`,background:T.bg,color:T.text,fontSize:fs(18),textAlign:"center",letterSpacing:8,outline:"none",fontFamily:"monospace",marginBottom:12}}/>
+        <button onClick={()=>tryLogin(loginPw)} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:AC,color:"#000",cursor:"pointer",fontSize:fs(13),fontWeight:700,marginBottom:16}}>Unlock</button>
         <div style={{borderTop:"1px solid #27272a",paddingTop:16,marginTop:8}}>
           <div style={{color:"#71717a",fontSize:9,fontWeight:600,letterSpacing:1,marginBottom:10}}>🔒 SECURE NOTES</div>
           {Object.entries(pwStore).map(([k,v])=>(<div key={k} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
@@ -137,6 +137,15 @@ export default function App(){
       </div>
     </div>
   </div>);
+  const UI_DEF={accent:"#f59e0b",fontSize:"md",density:"normal",theme:"dark",tabPos:"top",hidden:{}};
+  const[uiCfg,sUiCfg]=useState(()=>{try{return{...UI_DEF,...JSON.parse(localStorage.getItem("ub-ui"))}}catch(e){return{...UI_DEF}}});
+  const setUI=(k,v)=>sUiCfg(c=>{const n={...c,[k]:v};try{localStorage.setItem("ub-ui",JSON.stringify(n))}catch(e){}return n});
+  const AC=uiCfg.accent;
+  const T=uiCfg.theme==="light"?{bg:"#f4f4f5",card:"#ffffff",border:"#d4d4d8",text:"#18181b",muted:"#71717a",subtle:"#a1a1aa",hover:"#e4e4e7",inputBg:"#f4f4f5",scheme:"light",overlay:"rgba(255,255,255,.85)",tabBg:"rgba(228,228,231,.5)",tabActive:"#d4d4d8",loginBg:"#e4e4e7",toast:"#ffffff"}:{bg:"#18181b",card:"#27272a",border:"#3f3f46",text:"#fafafa",muted:"#71717a",subtle:"#a1a1aa",hover:"#3f3f46",inputBg:"#27272a",scheme:"dark",overlay:"rgba(0,0,0,.85)",tabBg:"rgba(63,63,70,.3)",tabActive:"#3f3f46",loginBg:"#09090b",toast:"#27272a"};
+  const FM=uiCfg.fontSize==="sm"?0.85:uiCfg.fontSize==="lg"?1.15:1;
+  const fs=n=>Math.round(n*FM);
+  const DM=uiCfg.density==="compact"?0.7:uiCfg.density==="spacious"?1.3:1;
+  const ds=n=>Math.round(n*DM);
   const[ct,sCT]=useState("area");const[tab,sTB]=useState("home");const[cv,sCV]=useState("stacked");const[bv,sBV]=useState("grouped");const[showTot,sSTot]=useState(false);const[visCh,sVisCh]=useState(["shopify","square","cash","amex"]);const[stgExp,sStgExp]=useState(new Set());
   const[toast,sT]=useState(null);const[impItems,sII]=useState(null);const[impCh,sIC]=useState("");const[impFilter,sIF]=useState("all");
   const[stfP,sSTP]=useState(null);const[gV,sGV]=useState("cum");const[sec,sSEC]=useState("daily");
@@ -512,35 +521,41 @@ export default function App(){
           if(cfg.split==="AJAY")add("AJAY",cn);else if(cfg.split==="DEREK")add("DEREK",cn);else{add("AJAY",cn/2);add("DEREK",cn/2);}}}}
     return totals;},[impItems,impCh]);
 
-  const is={background:"#27272a",border:"1px solid #3f3f46",borderRadius:8,padding:"8px 12px",color:"#fafafa",fontSize:13,outline:"none"};
-  const pl=(a,c="#f59e0b")=>({padding:"4px 12px",borderRadius:20,border:"1px solid",borderColor:a?`${c}60`:"#3f3f46",background:a?`${c}15`:"transparent",color:a?c:"#71717a",cursor:"pointer",fontSize:11,fontWeight:600});
-  const bt=a=>({padding:"4px 14px",borderRadius:6,border:`1px solid ${a?"#f59e0b33":"#3f3f46"}`,background:a?"rgba(245,158,11,.1)":"transparent",color:a?"#f59e0b":"#a1a1aa",cursor:"pointer",fontSize:11,fontWeight:600});
-  const cr={background:"#27272a",borderRadius:10,padding:"14px 16px",border:"1px solid #3f3f46"};
-  const sx={background:"#27272a",borderRadius:10,border:"1px solid #3f3f46",padding:"20px 10px 10px"};
+  const is={background:T.inputBg,border:`1px solid ${T.border}`,borderRadius:8,padding:`${ds(8)}px ${ds(12)}px`,color:T.text,fontSize:fs(13),outline:"none"};
+  const pl=(a,c=AC)=>({padding:`${ds(4)}px ${ds(12)}px`,borderRadius:20,border:"1px solid",borderColor:a?`${c}60`:T.border,background:a?`${c}15`:"transparent",color:a?c:T.muted,cursor:"pointer",fontSize:fs(11),fontWeight:600});
+  const bt=a=>({padding:`${ds(4)}px ${ds(14)}px`,borderRadius:6,border:`1px solid ${a?`${AC}33`:T.border}`,background:a?`${AC}18`:"transparent",color:a?AC:T.subtle,cursor:"pointer",fontSize:fs(11),fontWeight:600});
+  const cr={background:T.card,borderRadius:10,padding:`${ds(14)}px ${ds(16)}px`,border:`1px solid ${T.border}`};
+  const sx={background:T.card,borderRadius:10,border:`1px solid ${T.border}`,padding:`${ds(20)}px ${ds(10)}px ${ds(10)}px`};
   const presets=[{l:"Today",f:TODAY,t:TODAY},{l:"Week",f:daysAgo(7),t:TODAY},{l:"14d",f:daysAgo(14),t:TODAY},{l:"Feb",f:"2026-02-01",t:TODAY},{l:"Jan",f:"2026-01-01",t:"2026-01-31"},{l:"All",f:"2026-01-01",t:TODAY}];
   const iv=Math.floor(fd.length>14?fd.length/8:0);const iv2=Math.max(1,Math.floor(stfD.length/8));
 
   if(!authed)return loginScreen;
-  return(<div style={{minHeight:"100vh",background:"#18181b",padding:"12px 16px",fontFamily:"'Segoe UI',system-ui,sans-serif",color:"#fafafa",fontSize:13}}>
-    <div style={{maxWidth:1400,margin:"0 auto"}}>
-      {toast&&<div style={{position:"fixed",top:20,right:20,background:"#27272a",border:"1px solid #22c55e40",borderRadius:10,padding:"12px 20px",color:"#22c55e",fontSize:13,fontWeight:600,zIndex:1000}}>{toast}</div>}
-      {viewImg&&<div onClick={()=>sViewImg(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><img src={viewImg} style={{maxWidth:"90%",maxHeight:"90%",borderRadius:8,boxShadow:"0 4px 30px rgba(0,0,0,.6)"}}/><button onClick={()=>sViewImg(null)} style={{position:"absolute",top:16,right:16,background:"transparent",border:"none",color:"#fafafa",fontSize:24,cursor:"pointer"}}>×</button></div>}
+  const isLeft=uiCfg.tabPos==="left";const isBottom=uiCfg.tabPos==="bottom";
+  return(<div style={{minHeight:"100vh",background:T.bg,padding:`${ds(12)}px ${ds(16)}px`,fontFamily:"'Segoe UI',system-ui,sans-serif",color:T.text,fontSize:fs(13),paddingBottom:isBottom?60:undefined}}>
+    <div style={{maxWidth:1400,margin:"0 auto",display:isLeft?"flex":"block",gap:isLeft?ds(16):undefined}}>
+      {toast&&<div style={{position:"fixed",top:20,right:20,background:T.toast,border:"1px solid #22c55e40",borderRadius:10,padding:"12px 20px",color:"#22c55e",fontSize:fs(13),fontWeight:600,zIndex:1000}}>{toast}</div>}
+      {viewImg&&<div onClick={()=>sViewImg(null)} style={{position:"fixed",inset:0,background:T.overlay,zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><img src={viewImg} style={{maxWidth:"90%",maxHeight:"90%",borderRadius:8,boxShadow:"0 4px 30px rgba(0,0,0,.6)"}}/><button onClick={()=>sViewImg(null)} style={{position:"absolute",top:16,right:16,background:"transparent",border:"none",color:T.text,fontSize:24,cursor:"pointer"}}>×</button></div>}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:12}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}><img src="data:image/png;base64,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" style={{width:38,height:38,borderRadius:8,objectFit:"contain"}}/><div><h1 style={{fontSize:20,fontWeight:800,margin:0}}>UNBOXED TCG</h1><p style={{color:"#f59e0b",fontSize:10,fontWeight:600,margin:0,letterSpacing:2.5}}>SALES DASHBOARD</p></div></div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}><img src="data:image/png;base64,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" style={{width:38,height:38,borderRadius:8,objectFit:"contain"}}/><div><h1 style={{fontSize:20,fontWeight:800,margin:0}}>UNBOXED TCG</h1><p style={{color:AC,fontSize:fs(10),fontWeight:600,margin:0,letterSpacing:2.5}}>SALES DASHBOARD</p></div></div>
         <div style={{position:"relative",minWidth:200}}><input type="text" placeholder="Search..." value={search} onChange={e=>sSR(e.target.value)} style={{...is,width:"100%",paddingLeft:32}}/><span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"#71717a",fontSize:13}}>🔍</span>
           {search&&sr.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:"#16162a",border:"1px solid #3f3f46",borderRadius:10,overflow:"hidden",zIndex:100}}>
             {sr.map(({n:p,t})=>(<div key={p} onClick={()=>{s1(p);sSR("");}} style={{padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",borderBottom:"1px solid rgba(63,63,70,.5)"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(63,63,70,.6)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:CO[p]}}/><span style={{fontWeight:600,fontSize:13}}>{p}</span></div><span style={{color:"#a1a1aa",fontFamily:"monospace",fontSize:12}}>{FF(t)}</span></div>))}</div>}</div>
       </div>
-      <div style={{display:"flex",gap:2,marginBottom:20,background:"rgba(63,63,70,.3)",borderRadius:10,padding:3}}>
-        {[["home","🏠 Home"],["input","💳 Transactions"],["sales","📊 Analytics"],["people","👥 People"],["settings","⚙️ Settings"]].filter(([id])=>!(viewOnly&&id==="input")).map(([id,lb])=>(<button key={id} onClick={()=>{sTB(id);if(id==="sales")sSEC("daily");if(id==="input")sSEC("manual");}} style={{flex:"0 0 auto",padding:"10px 14px",borderRadius:8,border:"none",background:tab===id?"#3f3f46":"transparent",color:tab===id?"#fafafa":"#71717a",cursor:"pointer",fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{lb}</button>))}
-        {viewOnly&&<div style={{display:"flex",alignItems:"center",marginLeft:"auto",padding:"4px 10px",borderRadius:6,background:"rgba(139,92,246,.15)",border:"1px solid rgba(139,92,246,.3)"}}><span style={{color:"#a78bfa",fontSize:9,fontWeight:700,letterSpacing:1}}>👁 VIEW ONLY</span></div>}
-      </div>
+      {(()=>{const tabItems=[["home","🏠 Home"],["input","💳 Transactions"],["sales","📊 Analytics"],["people","👥 People"],["settings","⚙️ Settings"]].filter(([id])=>!(viewOnly&&id==="input"));
+        const tabBtns=tabItems.map(([id,lb])=>(<button key={id} onClick={()=>{sTB(id);if(id==="sales")sSEC("daily");if(id==="input")sSEC("manual");}} style={{flex:isLeft?"none":"0 0 auto",padding:isLeft?`${ds(10)}px ${ds(14)}px`:`${ds(10)}px ${ds(14)}px`,borderRadius:8,border:"none",background:tab===id?T.tabActive:"transparent",color:tab===id?T.text:T.muted,cursor:"pointer",fontSize:fs(12),fontWeight:600,whiteSpace:"nowrap",textAlign:isLeft?"left":"center",width:isLeft?"100%":"auto"}}>{lb}</button>));
+        const voTag=viewOnly?<div style={{display:"flex",alignItems:"center",marginLeft:isLeft?0:"auto",padding:"4px 10px",borderRadius:6,background:"rgba(139,92,246,.15)",border:"1px solid rgba(139,92,246,.3)",marginTop:isLeft?4:0}}><span style={{color:"#a78bfa",fontSize:9,fontWeight:700,letterSpacing:1}}>👁 VIEW ONLY</span></div>:null;
+        if(isBottom)return <div style={{position:"fixed",bottom:0,left:0,right:0,display:"flex",gap:2,background:T.card,borderTop:`1px solid ${T.border}`,padding:3,zIndex:900,justifyContent:"center"}}>{tabBtns}{voTag}</div>;
+        if(isLeft)return <div style={{minWidth:160,display:"flex",flexDirection:"column",gap:2,background:T.tabBg,borderRadius:10,padding:3,position:"sticky",top:12,alignSelf:"flex-start"}}>{tabBtns}{voTag}</div>;
+        return <div style={{display:"flex",gap:2,marginBottom:20,background:T.tabBg,borderRadius:10,padding:3}}>{tabBtns}{voTag}</div>;
+      })()}
+      <div style={isLeft?{flex:1,minWidth:0}:{}}>
 
 {/* ===== HOME ===== */}
 {tab==="home"&&<>
-  <div style={{...cr,padding:"20px",marginBottom:16,background:"#27272a"}}>
+  {!uiCfg.hidden?.["home.ytd"]&&<div style={{...cr,padding:"20px",marginBottom:16}}>
+
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-      <div><div style={{color:"#f59e0b",fontSize:10,fontWeight:600,letterSpacing:1.5}}>YTD REVENUE</div><div style={{color:"#fafafa",fontSize:32,fontWeight:800,fontFamily:"monospace"}}>{FF(lastB.total)}</div></div>
+      <div><div style={{color:AC,fontSize:10,fontWeight:600,letterSpacing:1.5}}>YTD REVENUE</div><div style={{color:"#fafafa",fontSize:32,fontWeight:800,fontFamily:"monospace"}}>{FF(lastB.total)}</div></div>
       <div style={{textAlign:"right"}}><div style={{color:"#71717a",fontSize:11}}>52 days</div><div style={{color:"#a1a1aa",fontFamily:"monospace",fontSize:13}}>{FF(Math.round(lastB.total/52))}/day</div></div>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -551,26 +566,26 @@ export default function App(){
         <div style={{color:"#71717a",fontSize:10}}>{(v/lastB.total*100).toFixed(0)}%</div>
       </div>)})}
     </div>
-  </div>
-  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
+  </div>}
+  {!uiCfg.hidden?.["home.bank"]&&<div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
     {(()=>{const totalAmex=Object.values(balances).reduce((s,b)=>s+b.amex,0);const extraAmex=bankBals.AMEX-totalAmex;return(
     <div style={{...cr,padding:"12px",borderLeft:"3px solid #06b6d4"}}><div style={{color:"#06b6d4",fontSize:9,fontWeight:700}}>AMEX ACCT</div><div style={{color:bankBals.AMEX>=0?"#10b981":"#ef4444",fontSize:17,fontWeight:800,fontFamily:"monospace"}}>{FX(bankBals.AMEX)}</div><div style={{color:extraAmex>=0?"#52525b":"#ef4444",fontSize:9,fontFamily:"monospace",marginTop:2}}>({extraAmex>=0?"+":""}{FX(extraAmex)} extra)</div></div>);})()}
     <div style={{...cr,padding:"12px",borderLeft:"3px solid #3b82f6"}}><div style={{color:"#3b82f6",fontSize:9,fontWeight:700}}>CHASE ACCT</div><div style={{color:bankBals.CHASE>=0?"#10b981":"#ef4444",fontSize:17,fontWeight:800,fontFamily:"monospace"}}>{FX(bankBals.CHASE)}</div></div>
     {(()=>{const totalCash=Object.values(balances).reduce((s,b)=>s+b.cash,0);return(
-    <div style={{...cr,padding:"12px",borderLeft:"3px solid #f59e0b"}}><div style={{color:"#f59e0b",fontSize:9,fontWeight:700}}>CASH ON HAND</div><div style={{color:"#fafafa",fontSize:17,fontWeight:800,fontFamily:"monospace"}}>{FF(totalCash)}</div></div>);})()}
-  </div>
-  <div style={{color:"#71717a",fontSize:11,fontWeight:600,letterSpacing:1,marginBottom:8}}>ACCOUNT BALANCES</div>
+    <div style={{...cr,padding:"12px",borderLeft:`3px solid ${AC}`}}><div style={{color:AC,fontSize:9,fontWeight:700}}>CASH ON HAND</div><div style={{color:"#fafafa",fontSize:17,fontWeight:800,fontFamily:"monospace"}}>{FF(totalCash)}</div></div>);})()}
+  </div>}
+  {!uiCfg.hidden?.["home.balances"]&&<><div style={{color:T.muted,fontSize:11,fontWeight:600,letterSpacing:1,marginBottom:8}}>ACCOUNT BALANCES</div>
   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:8,marginBottom:16}}>
     {Object.entries(balances).filter(([,b])=>b.cash||b.amex||b.overall).sort(([,a],[,b])=>b.overall-a.overall).map(([n,b])=>(<div key={n} style={{...cr,padding:"12px 14px",borderLeft:`3px solid ${CO[n]||"#555"}`}}>
-      <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:CO[n]||"#999",fontSize:11,fontWeight:700}}>{n}</span><span style={{color:b.overall<0?"#ef4444":"#fff",fontSize:15,fontWeight:800,fontFamily:"monospace"}}>{FX(b.overall)}</span></div>
+      <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:CO[n]||"#999",fontSize:11,fontWeight:700}}>{n}</span><span style={{color:b.overall<0?"#ef4444":T.text,fontSize:15,fontWeight:800,fontFamily:"monospace"}}>{FX(b.overall)}</span></div>
       <div style={{display:"flex",gap:10,marginTop:3,fontSize:10}}><span style={{color:"#a1a1aa"}}>Cash <span style={{color:b.cash<0?"#ef4444":"#555",fontFamily:"monospace"}}>{FX(b.cash)}</span></span><span style={{color:"#a1a1aa"}}>Amex <span style={{color:b.amex<0?"#ef4444":"#555",fontFamily:"monospace"}}>{FX(b.amex)}</span></span></div>
     </div>))}
-  </div>
+  </div></>}
 </>}
 
 {/* ===== ANALYTICS ===== */}
 {tab==="sales"&&<>
-  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>{[["daily","📊 Daily"],["breakdown","📋 Breakdown"],["channels","💳 Channels"],["products","🏷️ Products"],["consign","📦 Consign"],["monthly","📅 Monthly"],["growth","📈 Growth"],["goal","🎯 Goal"]].map(([k,l])=>(<button key={k} onClick={()=>sSEC(k)} style={bt(sec===k)}>{l}</button>))}</div>
+  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>{[["daily","📊 Daily"],["breakdown","📋 Breakdown"],["channels","💳 Channels"],["products","🏷️ Products"],["consign","📦 Consign"],["monthly","📅 Monthly"],["growth","📈 Growth"],["goal","🎯 Goal"]].filter(([k])=>!uiCfg.hidden?.[`analytics.${k}`]).map(([k,l])=>(<button key={k} onClick={()=>sSEC(k)} style={bt(sec===k)}>{l}</button>))}</div>
   <div style={{...cr,marginBottom:12,padding:"12px 14px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:8}}><span style={{color:"#71717a",fontSize:10,fontWeight:600}}>RANGE</span>{presets.map(p=>(<button key={p.l} onClick={()=>{sDF(p.f);sDT(p.t);}} style={bt(df===p.f&&dt===p.t)}>{p.l}</button>))}</div>
     <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><input type="date" value={df} onChange={e=>sDF(e.target.value)} style={{...is,fontSize:11,flex:1,minWidth:110,colorScheme:"dark"}}/><span style={{color:"#a1a1aa"}}>→</span><input type="date" value={dt} onChange={e=>sDT(e.target.value)} style={{...is,fontSize:11,flex:1,minWidth:110,colorScheme:"dark"}}/><span style={{color:"#71717a",fontSize:11}}>{fd.length}d</span></div></div>
   {sec==="daily"&&<>
@@ -741,7 +756,7 @@ export default function App(){
       </div>
       <div style={{display:"flex",gap:5,marginBottom:10}}>
         <span style={{color:"#52525b",fontSize:9,alignSelf:"center"}}>Sort:</span>
-        {[["revenue","💰 Revenue"],["count","🔢 Qty"],["avg","📊 Avg Price"]].map(([k,l])=>(<button key={k} onClick={()=>sProdSort(k)} style={{padding:"3px 10px",borderRadius:5,border:`1px solid ${prodSort===k?"#f59e0b40":"#3f3f46"}`,background:prodSort===k?"rgba(245,158,11,.1)":"transparent",color:prodSort===k?"#f59e0b":"#52525b",cursor:"pointer",fontSize:9,fontWeight:600}}>{l}</button>))}
+        {[["revenue","💰 Revenue"],["count","🔢 Qty"],["avg","📊 Avg Price"]].map(([k,l])=>(<button key={k} onClick={()=>sProdSort(k)} style={{padding:"3px 10px",borderRadius:5,border:`1px solid ${prodSort===k?`${AC}40`:T.border}`,background:prodSort===k?`${AC}18`:"transparent",color:prodSort===k?AC:"#52525b",cursor:"pointer",fontSize:9,fontWeight:600}}>{l}</button>))}
       </div>
       {/* Top products */}
       {products.length===0?<div style={{textAlign:"center",padding:20,color:"#52525b",fontSize:12}}>No product data in entries for this range. Import some CSVs first.</div>
@@ -765,13 +780,13 @@ export default function App(){
       {/* Frequent sellers - top by count */}
       {products.length>0&&<>
         <div style={{...cr,marginTop:12,padding:"12px 14px"}}>
-          <div style={{color:"#f59e0b",fontSize:10,fontWeight:700,marginBottom:8}}>🔥 MOST FREQUENT SELLERS</div>
+          <div style={{color:AC,fontSize:10,fontWeight:700,marginBottom:8}}>🔥 MOST FREQUENT SELLERS</div>
           {[...products].sort((a,b)=>b.count-a.count).slice(0,5).map((p,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:i<4?"1px solid rgba(63,63,70,.2)":"none"}}>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
               <span style={{color:p.type==="sealed"?"#a78bfa":"#06b6d4",fontSize:8}}>{p.type==="sealed"?"📦":"🃏"}</span>
               <span style={{color:"#d4d4d8",fontSize:11}}>{p.name.length>30?p.name.slice(0,30)+"…":p.name}</span>
             </div>
-            <span style={{color:"#f59e0b",fontSize:11,fontWeight:700,fontFamily:"monospace"}}>{p.count}x</span>
+            <span style={{color:AC,fontSize:11,fontWeight:700,fontFamily:"monospace"}}>{p.count}x</span>
           </div>))}
         </div>
         <div style={{...cr,marginTop:8,padding:"12px 14px"}}>
@@ -809,7 +824,7 @@ export default function App(){
     const rC=calcComm(rangeTotals);const aC=calcComm(allTimeTotals);
     return(<>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-        <div style={{...cr,padding:"12px",borderLeft:"3px solid #f59e0b"}}><div style={{color:"#71717a",fontSize:9,fontWeight:600}}>CONSIGN SALES (RANGE)</div><div style={{color:"#f59e0b",fontSize:18,fontWeight:800,fontFamily:"monospace"}}>{FF(rangeTotal)}</div><div style={{color:"#a1a1aa",fontSize:9}}>Our fee: {FF(rC.totFee)}</div></div>
+        <div style={{...cr,padding:"12px",borderLeft:`3px solid ${AC}`}}><div style={{color:"#71717a",fontSize:9,fontWeight:600}}>CONSIGN SALES (RANGE)</div><div style={{color:AC,fontSize:18,fontWeight:800,fontFamily:"monospace"}}>{FF(rangeTotal)}</div><div style={{color:"#a1a1aa",fontSize:9}}>Our fee: {FF(rC.totFee)}</div></div>
         <div style={{...cr,padding:"12px",borderLeft:"3px solid #10b981"}}><div style={{color:"#71717a",fontSize:9,fontWeight:600}}>CONSIGN SALES (ALL-TIME)</div><div style={{color:"#10b981",fontSize:18,fontWeight:800,fontFamily:"monospace"}}>{FF(allTotal)}</div><div style={{color:"#a1a1aa",fontSize:9}}>Our fee: {FF(aC.totFee)}</div></div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
@@ -826,7 +841,7 @@ export default function App(){
           return(<div key={p} style={{padding:"12px 14px",borderBottom:"1px solid rgba(63,63,70,.3)"}}>
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
               <div style={{width:8,height:8,borderRadius:"50%",background:CO[p]}}/><span style={{color:CO[p],fontSize:12,fontWeight:700,flex:1}}>{p}</span>
-              <span style={{color:"#f59e0b",fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:10,background:"rgba(245,158,11,.1)",border:"1px solid rgba(245,158,11,.2)"}}>{(rate*100).toFixed(0)}%{commRates[p]?.split==="AJAY"?" → Ajay only":" → Split"}</span>
+              <span style={{color:AC,fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:10,background:`${AC}18`,border:"1px solid rgba(245,158,11,.2)"}}>{(rate*100).toFixed(0)}%{commRates[p]?.split==="AJAY"?" → Ajay only":" → Split"}</span>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
               <div style={{background:"rgba(63,63,70,.3)",borderRadius:6,padding:"8px 10px"}}>
@@ -937,7 +952,7 @@ export default function App(){
         if(relevantMs.length===0)return null;
         const topPpl=allProj.slice(0,6).map(a=>a.p);
         return(<div style={{...cr,marginTop:10,padding:"14px 16px"}}>
-          <div style={{color:"#f59e0b",fontSize:10,fontWeight:700,marginBottom:10}}>🏆 MILESTONE TRACKER</div>
+          <div style={{color:AC,fontSize:10,fontWeight:700,marginBottom:10}}>🏆 MILESTONE TRACKER</div>
           <div style={{overflowX:"auto"}}>
             <div style={{display:"grid",gridTemplateColumns:`80px repeat(${topPpl.length},1fr)`,gap:0,minWidth:topPpl.length*70+80}}>
               {/* Header */}
@@ -948,7 +963,7 @@ export default function App(){
               {/* Rows */}
               {relevantMs.map(m=>(<React.Fragment key={m}>
                 <div style={{padding:"6px",borderBottom:"1px solid rgba(63,63,70,.2)",display:"flex",alignItems:"center"}}>
-                  <span style={{color:"#f59e0b",fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{m>=1000000?`$${(m/1000000).toFixed(0)}M`:m>=1000?`$${(m/1000).toFixed(0)}K`:FF(m)}</span>
+                  <span style={{color:AC,fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{m>=1000000?`$${(m/1000000).toFixed(0)}M`:m>=1000?`$${(m/1000).toFixed(0)}K`:FF(m)}</span>
                 </div>
                 {topPpl.map(p=>{const ms=pplMilestones[p]?.[m];return(<div key={p} style={{padding:"6px",borderBottom:"1px solid rgba(63,63,70,.2)",textAlign:"center"}}>
                   {ms?<span style={{color:ms.type==="hit"?"#22c55e":"#71717a",fontSize:9,fontWeight:ms.type==="hit"?600:400}}>
@@ -994,7 +1009,7 @@ export default function App(){
         const relevantMs=milestones.filter(m=>PP.some(p=>(lastB[p]||0)>=m*0.5||pplMilestones[p]?.[m]));
         const topPpl=PP.filter(p=>(lastB[p]||0)>0).sort((a,b)=>(lastB[b]||0)-(lastB[a]||0)).slice(0,6);
         return relevantMs.length>0&&<div style={{...cr,marginTop:10,padding:"14px 16px"}}>
-          <div style={{color:"#f59e0b",fontSize:10,fontWeight:700,marginBottom:10}}>🏆 MILESTONE TIMESTAMPS</div>
+          <div style={{color:AC,fontSize:10,fontWeight:700,marginBottom:10}}>🏆 MILESTONE TIMESTAMPS</div>
           <div style={{overflowX:"auto"}}>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:9}}>
               <thead><tr>
@@ -1002,7 +1017,7 @@ export default function App(){
                 {topPpl.map(p=>(<th key={p} style={{textAlign:"center",padding:"4px 4px",color:CO[p],fontWeight:700,borderBottom:"1px solid #3f3f46",minWidth:65}}>{p}</th>))}
               </tr></thead>
               <tbody>{relevantMs.map(m=>(<tr key={m}>
-                <td style={{padding:"5px 6px",color:"#f59e0b",fontWeight:700,fontFamily:"monospace",borderBottom:"1px solid rgba(63,63,70,.3)"}}>{m>=1000000?`$${(m/1000000)}M`:m>=1000?`$${m/1000}K`:`$${m}`}</td>
+                <td style={{padding:"5px 6px",color:AC,fontWeight:700,fontFamily:"monospace",borderBottom:"1px solid rgba(63,63,70,.3)"}}>{m>=1000000?`$${(m/1000000)}M`:m>=1000?`$${m/1000}K`:`$${m}`}</td>
                 {topPpl.map(p=>{const hit=pplMilestones[p]?.[m];const isEst=typeof hit==="string"&&hit.startsWith("~");const val=(lastB[p]||0);const pct=val/m*100;
                   return(<td key={p} style={{textAlign:"center",padding:"5px 4px",borderBottom:"1px solid rgba(63,63,70,.3)"}}>
                     {hit?<span style={{color:isEst?"#52525b":"#22c55e",fontSize:8,fontWeight:isEst?400:600}}>{isEst?hit:SD(hit)}</span>
@@ -1024,7 +1039,7 @@ export default function App(){
   {sec==="manual"&&<div style={{...cr,padding:"20px"}}>
     {/* CSV Import - drag & drop + buttons */}
     <div
-      onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="#f59e0b";e.currentTarget.style.background="rgba(245,158,11,.05)";}}
+      onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=AC;e.currentTarget.style.background=`${AC}0d`;}}
       onDragLeave={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";}}
       onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";const f=e.dataTransfer.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const txt=ev.target.result;const type=txt.includes("Lineitem name")||txt.includes("Financial Status")?"shopify":"square";const r=type==="shopify"?parseShopifyCSV(txt):parseSquareCSV(txt);sII(r.items);sIC(r.channel);sIF("all");tw(`✓ Detected ${type==="shopify"?"Shopify":"Square"} CSV`);}catch(err){tw("⚠ Error reading file")}};reader.readAsText(f);}}
       style={{display:"flex",gap:6,marginBottom:14,alignItems:"center",flexWrap:"wrap",padding:"8px 12px",borderRadius:8,border:"1px dashed #3f3f46",transition:"all .2s"}}>
@@ -1069,7 +1084,7 @@ export default function App(){
             return(<div key={it.id}>
               {newOrd&&it.order&&grp.length>1&&<div style={{padding:"6px 14px",background:"rgba(6,182,212,.04)",borderTop:idx>0?"2px solid #52525b":"none",marginTop:idx>0?4:0,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <span style={{color:"#06b6d4",fontSize:12,fontWeight:800,fontFamily:"monospace"}}>{it.order}</span><span style={{color:"#71717a",fontSize:9}}>{grp.length} items</span><span style={{color:"#fafafa",fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{FX(ordTotal)}</span>
-                {hasSplitInGrp&&<><span style={{color:"#96bf48",fontSize:9}}>Shop: <b>{FX(ordShop)}</b></span>{ordCash>0&&<span style={{color:"#f59e0b",fontSize:9}}>Cash: <b>{FX(ordCash)}</b></span>}{ordTrade>0&&<span style={{color:"#a78bfa",fontSize:9}}>Trade: <b>{FX(ordTrade)}</b></span>}</>}
+                {hasSplitInGrp&&<><span style={{color:"#96bf48",fontSize:9}}>Shop: <b>{FX(ordShop)}</b></span>{ordCash>0&&<span style={{color:AC,fontSize:9}}>Cash: <b>{FX(ordCash)}</b></span>}{ordTrade>0&&<span style={{color:"#a78bfa",fontSize:9}}>Trade: <b>{FX(ordTrade)}</b></span>}</>}
               </div>}
               {newOrd&&it.order&&grp.length<=1&&<div style={{borderTop:idx>0?"2px solid #52525b":"none",marginTop:idx>0?4:0}}/>}
               <div style={{padding:"8px 14px",borderBottom:"1px solid rgba(63,63,70,.3)",background:isU?"rgba(239,68,68,.03)":isSplit?"rgba(249,115,22,.04)":it.fl.length?"rgba(245,158,11,.02)":"transparent"}}>
@@ -1112,7 +1127,7 @@ export default function App(){
           <div style={{display:"flex",gap:8,alignItems:"center",marginLeft:48,padding:"4px 0",flexWrap:"wrap"}}>
             <span style={{color:match?"#555":"#ef4444",fontSize:9,fontWeight:match?400:700}}>Total: <b style={{color:match?"#fff":"#ef4444"}}>{FX(orig)}</b>{!match&&` ⚠ =${FX(sum)}`}</span>
             <div style={{display:"flex",alignItems:"center",gap:3}}><span style={{color:"#96bf48",fontSize:9,fontWeight:600}}>SHOP:</span><input type="number" value={sa||""} placeholder="$0" onChange={e=>{const v=parseFloat(e.target.value)||0;editSplit(it.id,"shopAmt",v);}} style={{...is,width:55,padding:"3px 6px",fontSize:11,borderRadius:6,borderColor:!match?"#ef444440":"#3f3f46"}}/></div>
-            <div style={{display:"flex",alignItems:"center",gap:3}}><span style={{color:"#f59e0b",fontSize:9,fontWeight:600}}>CASH:</span><input type="number" value={ca||""} placeholder="$0" onChange={e=>{const v=parseFloat(e.target.value)||0;editSplit(it.id,"cashAmt",v);const newShop=Math.max(0,orig-v-ta);editSplit(it.id,"shopAmt",newShop);}} style={{...is,width:55,padding:"3px 6px",fontSize:11,borderRadius:6}}/></div>
+            <div style={{display:"flex",alignItems:"center",gap:3}}><span style={{color:AC,fontSize:9,fontWeight:600}}>CASH:</span><input type="number" value={ca||""} placeholder="$0" onChange={e=>{const v=parseFloat(e.target.value)||0;editSplit(it.id,"cashAmt",v);const newShop=Math.max(0,orig-v-ta);editSplit(it.id,"shopAmt",newShop);}} style={{...is,width:55,padding:"3px 6px",fontSize:11,borderRadius:6}}/></div>
             <div style={{display:"flex",alignItems:"center",gap:3}}><span style={{color:"#a78bfa",fontSize:9,fontWeight:600}}>TRADE:</span><input type="number" value={ta||""} placeholder="$0" onChange={e=>{const v=parseFloat(e.target.value)||0;editSplit(it.id,"tradeAmt",v);const newShop=Math.max(0,orig-ca-v);editSplit(it.id,"shopAmt",newShop);}} style={{...is,width:55,padding:"3px 6px",fontSize:11,borderRadius:6}}/>
               {ta>0&&<><span style={{color:"#a78bfa",fontSize:8}}>from:</span><select value={it.tradeFrom||"SELF"} onChange={e=>editSplit(it.id,"tradeFrom",e.target.value)} style={{background:"rgba(167,139,250,.1)",border:"1px solid #a78bfa40",borderRadius:4,padding:"2px 4px",color:"#a78bfa",fontSize:9,fontWeight:600,cursor:"pointer",outline:"none"}}><option value="SELF" style={{background:"#27272a",color:"#a78bfa"}}>SELF</option>{["AJAY","DEREK","SHARED","LJ"].map(p=>(<option key={p} value={p} style={{background:"#27272a",color:CO[p]}}>{p}</option>))}</select>
                 {(it.tradeFrom||"SELF")!=="SELF"&&<span style={{color:"#a78bfa",fontSize:8}}>→ {it.owner}</span>}
@@ -1133,7 +1148,7 @@ export default function App(){
       <div><div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:4}}>CHANNEL</div><select value={cartCh} onChange={e=>sCartCh(e.target.value)} style={{...is,width:"100%"}}>{Object.entries(CL).map(([k,v])=>(<option key={k} value={k}>{v}</option>))}</select></div>
       <div><div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:4}}>DATE</div><input type="date" value={cartDt} onChange={e=>sCartDt(e.target.value)} style={{...is,width:"100%",colorScheme:"dark"}}/></div>
     </div>
-    <div onDrop={handleImgDrop} onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="#f59e0b";}} onDragLeave={e=>{e.currentTarget.style.borderColor="#3f3f46";}} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 12px",borderRadius:6,border:"1px dashed #3f3f46",transition:"border-color .15s"}}>
+    <div onDrop={handleImgDrop} onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=AC;}} onDragLeave={e=>{e.currentTarget.style.borderColor="#3f3f46";}} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 12px",borderRadius:6,border:"1px dashed #3f3f46",transition:"border-color .15s"}}>
       <label style={{color:"#71717a",cursor:"pointer",fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:4}}>
         📷 {cartImg?"Change":"Drop or click"}<input type="file" accept="image/*" onChange={handleCartImg} style={{display:"none"}}/>
       </label>
@@ -1144,18 +1159,18 @@ export default function App(){
       <div style={{minWidth:80}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>PERSON</div><select value={ciP} onChange={e=>sCIP(e.target.value)} style={{...is,width:"100%",padding:"6px 8px",fontSize:12,color:CO[ciP]||"#fff"}}><optgroup label="MAIN" style={{background:"#27272a"}}>{["AJAY","DEREK","SHARED","LJ"].map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup><optgroup label="CONSIGNERS" style={{background:"#27272a"}}>{PP.filter(p=>!["AJAY","DEREK","SHARED","LJ"].includes(p)).sort().map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup></select></div>
       <div style={{minWidth:70}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>TYPE</div><select value={ciIO} onChange={e=>sCIIO(e.target.value)} style={{...is,width:"100%",padding:"6px 8px",fontSize:11}}><option value="IN">Sale</option><option value="CONSIGNMENT">Consign</option><option value="OUT">Out</option><option value="XFER_IN">Xfer In</option><option value="XFER_OUT">Xfer Out</option></select></div>
       <div style={{flex:2,minWidth:120}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>ITEM</div>
-        <div style={{display:"flex",gap:3,marginBottom:4}}>{["Sealed","Single","Snack"].map(q=>(<button key={q} onClick={()=>{const nv=itemCat===q?"":q;sItemCat(nv);sCIN("");sSealGame("");sSealSeries("");sSealSub("");sSealType("");if(nv==="")sCIA("");}} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${itemCat===q?"#f59e0b40":"#3f3f46"}`,background:itemCat===q?"rgba(245,158,11,.1)":"transparent",color:itemCat===q?"#f59e0b":"#71717a",cursor:"pointer",fontSize:10,fontWeight:600}}>{q}</button>))}</div>
+        <div style={{display:"flex",gap:3,marginBottom:4}}>{["Sealed","Single","Snack"].map(q=>(<button key={q} onClick={()=>{const nv=itemCat===q?"":q;sItemCat(nv);sCIN("");sSealGame("");sSealSeries("");sSealSub("");sSealType("");if(nv==="")sCIA("");}} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${itemCat===q?"#f59e0b40":"#3f3f46"}`,background:itemCat===q?`${AC}18`:"transparent",color:itemCat===q?"#f59e0b":"#71717a",cursor:"pointer",fontSize:10,fontWeight:600}}>{q}</button>))}</div>
         {itemCat===""&&<input value={ciN} onChange={e=>sCIN(e.target.value)} placeholder="or type custom..." style={{...is,width:"100%",padding:"6px 8px",fontSize:12}}/>}
         {itemCat==="Sealed"&&(()=>{
           const gameData=SEAL_DATA[sealGame]||{};const seriesKeys=Object.keys(gameData);const subs=gameData[sealSeries]||[];
           const buildName=()=>[sealSub||sealSeries,sealType].filter(Boolean).join(" ");
           return(<div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{SEAL_GAMES.map(g=>(<button key={g} onClick={()=>{const nv=sealGame===g?"":g;sSealGame(nv);sSealSeries("");sSealSub("");sSealType("");sCIN("");}} style={{padding:"3px 8px",borderRadius:4,border:`1px solid ${sealGame===g?"#f59e0b40":"#3f3f46"}`,background:sealGame===g?"rgba(245,158,11,.1)":"transparent",color:sealGame===g?"#f59e0b":"#52525b",cursor:"pointer",fontSize:9,fontWeight:600}}>{g}</button>))}</div>
+            <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{SEAL_GAMES.map(g=>(<button key={g} onClick={()=>{const nv=sealGame===g?"":g;sSealGame(nv);sSealSeries("");sSealSub("");sSealType("");sCIN("");}} style={{padding:"3px 8px",borderRadius:4,border:`1px solid ${sealGame===g?`${AC}40`:T.border}`,background:sealGame===g?`${AC}18`:"transparent",color:sealGame===g?AC:"#52525b",cursor:"pointer",fontSize:9,fontWeight:600}}>{g}</button>))}</div>
             {sealGame&&seriesKeys.length>1&&<select value={sealSeries} onChange={e=>{sSealSeries(e.target.value);sSealSub("");sSealType("");sCIN("");}} style={{...is,padding:"5px 8px",fontSize:10}}><option value="">— Series —</option>{seriesKeys.map(s=>(<option key={s} value={s}>{s}</option>))}</select>}
             {sealGame&&seriesKeys.length===1&&<select value={sealSeries||seriesKeys[0]} onChange={e=>{sSealSeries(e.target.value);sSealSub("");sSealType("");sCIN("");}} style={{...is,padding:"5px 8px",fontSize:10}}><option value={seriesKeys[0]}>{seriesKeys[0]}</option></select>}
             {(()=>{const activeSeries=sealSeries||(seriesKeys.length===1?seriesKeys[0]:"");const activeSubs=gameData[activeSeries]||[];return activeSeries&&activeSubs.length>0?<select value={sealSub} onChange={e=>{const v=e.target.value;sSealSub(v);sCIN([v,sealType].filter(Boolean).join(" "));}} style={{...is,padding:"5px 8px",fontSize:10}}><option value="">— Sub Set —</option>{activeSubs.map(s=>(<option key={s} value={s}>{s}</option>))}</select>:null;})()}
             {(sealSub||(sealSeries||(seriesKeys.length===1?seriesKeys[0]:"")))&&<div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{SEAL_TYPES.map(t=>(<button key={t} onClick={()=>{const nt=sealType===t?"":t;sSealType(nt);const base=sealSub||(sealSeries||(seriesKeys.length===1?seriesKeys[0]:""));sCIN([base,nt].filter(Boolean).join(" "));}} style={{padding:"2px 7px",borderRadius:4,border:`1px solid ${sealType===t?"#a78bfa40":"#3f3f46"}`,background:sealType===t?"rgba(167,139,250,.1)":"transparent",color:sealType===t?"#a78bfa":"#52525b",cursor:"pointer",fontSize:8,fontWeight:600}}>{t}</button>))}</div>}
-            {ciN&&<div style={{color:"#f59e0b",fontSize:9,marginTop:2}}>→ {ciN}</div>}
+            {ciN&&<div style={{color:AC,fontSize:9,marginTop:2}}>→ {ciN}</div>}
             <input value={ciN} onChange={e=>sCIN(e.target.value)} placeholder="or type custom..." style={{...is,width:"100%",padding:"4px 8px",fontSize:10}}/>
           </div>);
         })()}
@@ -1164,12 +1179,12 @@ export default function App(){
       </div>
       <div style={{width:45}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>QTY</div><input type="number" value={ciQ} onChange={e=>sCIQ(e.target.value)} style={{...is,width:"100%",padding:"6px 8px",fontSize:12,textAlign:"center"}}/></div>
       <div style={{width:85}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>PRICE <span style={{color:"#52525b"}}>(+,)</span></div><input type="text" inputMode="decimal" value={ciA} onChange={e=>sCIA(e.target.value)} placeholder="5+10+3" onKeyDown={e=>e.key==="Enter"&&addCart()} style={{...is,width:"100%",padding:"6px 8px",fontSize:12}}/>
-        {ciA&&ciA.match(/[,+]/)&&(()=>{const s=String(ciA).replace(/\s/g,"").split(/[,+]/).map(s=>parseFloat(s)).filter(n=>n>0);return s.length>1?<div style={{color:"#f59e0b",fontSize:8,marginTop:2}}>= ${s.reduce((a,v)=>a+v,0).toFixed(2)}</div>:null;})()}</div>
-      <button onClick={addCart} style={{padding:"6px 12px",borderRadius:6,border:"none",background:"#f59e0b",color:"#000",cursor:"pointer",fontSize:12,fontWeight:700}}>+</button>
+        {ciA&&ciA.match(/[,+]/)&&(()=>{const s=String(ciA).replace(/\s/g,"").split(/[,+]/).map(s=>parseFloat(s)).filter(n=>n>0);return s.length>1?<div style={{color:AC,fontSize:8,marginTop:2}}>= ${s.reduce((a,v)=>a+v,0).toFixed(2)}</div>:null;})()}</div>
+      <button onClick={addCart} style={{padding:"6px 12px",borderRadius:6,border:"none",background:AC,color:"#000",cursor:"pointer",fontSize:12,fontWeight:700}}>+</button>
     </div>
     {cart.length>0&&<>
       <div style={{background:"rgba(63,63,70,.3)",borderRadius:10,border:"1px solid rgba(63,63,70,.6)",overflow:"hidden",marginBottom:12}}>
-        <div style={{padding:"8px 14px",borderBottom:"1px solid rgba(63,63,70,.5)",display:"flex",justifyContent:"space-between"}}><span style={{color:"#71717a",fontSize:10,fontWeight:600}}>ORDER — {cart.length} items</span><span style={{color:"#f59e0b",fontWeight:700,fontFamily:"monospace",fontSize:12}}>{FF(cart.reduce((s,c)=>s+c.total,0))}</span></div>
+        <div style={{padding:"8px 14px",borderBottom:"1px solid rgba(63,63,70,.5)",display:"flex",justifyContent:"space-between"}}><span style={{color:"#71717a",fontSize:10,fontWeight:600}}>ORDER — {cart.length} items</span><span style={{color:AC,fontWeight:700,fontFamily:"monospace",fontSize:12}}>{FF(cart.reduce((s,c)=>s+c.total,0))}</span></div>
         {cart.map(it=>{const ioC={"IN":"#10b981","CONSIGNMENT":"#f59e0b","OUT":"#ef4444","XFER_IN":"#06b6d4","XFER_OUT":"#a78bfa"};const updCart=(field,val)=>{sCart(c=>c.map(x=>x.id===it.id?{...x,[field]:val}:x));};return(<div key={it.id} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderBottom:"1px solid rgba(63,63,70,.3)"}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:CO[it.p]}}/><select value={it.p} onChange={e=>updCart("p",e.target.value)} style={{background:"transparent",border:"none",color:CO[it.p],fontSize:10,fontWeight:600,cursor:"pointer",outline:"none",minWidth:50,padding:0}}><optgroup label="MAIN" style={{background:"#27272a"}}>{["AJAY","DEREK","SHARED","LJ"].map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup><optgroup label="CONSIGNERS" style={{background:"#27272a"}}>{PP.filter(p=>!["AJAY","DEREK","SHARED","LJ"].includes(p)).sort().map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup></select>
           <select value={it.io} onChange={e=>updCart("io",e.target.value)} style={{fontSize:8,fontWeight:700,padding:"1px 4px",borderRadius:4,border:`1px solid ${ioC[it.io]}40`,background:`${ioC[it.io]}10`,color:ioC[it.io],cursor:"pointer",outline:"none"}}><option value="IN">Sale</option><option value="CONSIGNMENT">Consign</option><option value="OUT">Out</option><option value="XFER_IN">Xfer In</option><option value="XFER_OUT">Xfer Out</option></select>
@@ -1187,12 +1202,12 @@ export default function App(){
     </>}
   </div>}
   {sec==="money"&&<div style={{...cr,padding:"20px"}}>
-    <div style={{display:"flex",gap:4,marginBottom:14}}>{[["BUY","💸 Buy/Pull"],["CONSIGN_PAY","📦 Consigner Payout"],["PAY_LOG","📜 Payout Log"],["XFER","↔ Transfer"]].map(([k,l])=>(<button key={k} onClick={()=>sPOType(k)} style={{padding:"5px 12px",borderRadius:6,border:`1px solid ${poType===k?"#f59e0b40":"#3f3f46"}`,background:poType===k?"rgba(245,158,11,.1)":"transparent",color:poType===k?"#f59e0b":"#52525b",cursor:"pointer",fontSize:10,fontWeight:600}}>{l}</button>))}</div>
+    <div style={{display:"flex",gap:4,marginBottom:14}}>{[["BUY","💸 Buy/Pull"],["CONSIGN_PAY","📦 Consigner Payout"],["PAY_LOG","📜 Payout Log"],["XFER","↔ Transfer"]].map(([k,l])=>(<button key={k} onClick={()=>sPOType(k)} style={{padding:"5px 12px",borderRadius:6,border:`1px solid ${poType===k?`${AC}40`:T.border}`,background:poType===k?`${AC}18`:"transparent",color:poType===k?AC:"#52525b",cursor:"pointer",fontSize:10,fontWeight:600}}>{l}</button>))}</div>
 
     {poType==="BUY"&&<>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
       <div style={{color:"#71717a",fontSize:10,fontWeight:600,letterSpacing:1}}>💸 BUY / PULL OUT / EXPENSE</div>
-      <button onClick={()=>sPOSplitOn(v=>!v)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${poSplitOn?"#f59e0b40":"#3f3f46"}`,background:poSplitOn?"rgba(245,158,11,.1)":"transparent",color:poSplitOn?"#f59e0b":"#52525b",cursor:"pointer",fontSize:9,fontWeight:600}}>± Split</button>
+      <button onClick={()=>sPOSplitOn(v=>!v)} style={{padding:"4px 10px",borderRadius:5,border:`1px solid ${poSplitOn?`${AC}40`:T.border}`,background:poSplitOn?`${AC}18`:"transparent",color:poSplitOn?AC:"#52525b",cursor:"pointer",fontSize:9,fontWeight:600}}>± Split</button>
     </div>
     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
       {!poSplitOn&&<div style={{minWidth:90}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>PERSON</div>
@@ -1206,7 +1221,7 @@ export default function App(){
       <div style={{minWidth:100}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>DATE</div>
         <input type="date" value={poDt} onChange={e=>sPODt(e.target.value)} style={{...is,width:"100%",padding:"6px 8px",fontSize:11,colorScheme:"dark"}}/></div>
     </div>
-    <div onDrop={handleImgDrop} onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="#f59e0b";}} onDragLeave={e=>{e.currentTarget.style.borderColor="#3f3f46";}} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 12px",borderRadius:6,border:"1px dashed #3f3f46",transition:"border-color .15s"}}>
+    <div onDrop={handleImgDrop} onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=AC;}} onDragLeave={e=>{e.currentTarget.style.borderColor="#3f3f46";}} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 12px",borderRadius:6,border:"1px dashed #3f3f46",transition:"border-color .15s"}}>
       <label style={{color:"#71717a",cursor:"pointer",fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:4}}>
         📷 {cartImg?"Change":"Drop or click"}<input type="file" accept="image/*" onChange={handleCartImg} style={{display:"none"}}/>
       </label>
@@ -1219,7 +1234,7 @@ export default function App(){
       </div>
       {poSplitPpl.size>0&&(()=>{const a=parseFloat(poAmt)||0;const each=a>0?Math.round(a/poSplitPpl.size*100)/100:0;
         return <div style={{color:"#71717a",fontSize:10}}>
-          <span style={{color:"#f59e0b",fontWeight:700}}>{poSplitPpl.size}</span> people × <span style={{color:"#ef4444",fontFamily:"monospace",fontWeight:700}}>{FX(each)}</span> each = <span style={{color:"#ef4444",fontFamily:"monospace",fontWeight:700}}>{FX(each*poSplitPpl.size)}</span>
+          <span style={{color:AC,fontWeight:700}}>{poSplitPpl.size}</span> people × <span style={{color:"#ef4444",fontFamily:"monospace",fontWeight:700}}>{FX(each)}</span> each = <span style={{color:"#ef4444",fontFamily:"monospace",fontWeight:700}}>{FX(each*poSplitPpl.size)}</span>
         </div>;
       })()}
     </div>}
@@ -1241,7 +1256,7 @@ export default function App(){
       } else {
         const bal=balances[poP]||{cash:0,amex:0,overall:0};const chBal=poCh==="cash"?bal.cash:poCh==="amex"?bal.amex:bal.overall;
         return a>0?<div style={{...cr,padding:"14px",marginBottom:12,border:"1px solid rgba(239,68,68,.2)",background:"rgba(239,68,68,.03)"}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#a1a1aa",fontSize:10}}>Current {poCh.toUpperCase()} balance</span><span style={{color:"#f59e0b",fontFamily:"monospace",fontSize:12,fontWeight:700}}>{FX(chBal)}</span></div>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#a1a1aa",fontSize:10}}>Current {poCh.toUpperCase()} balance</span><span style={{color:AC,fontFamily:"monospace",fontSize:12,fontWeight:700}}>{FX(chBal)}</span></div>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}><span style={{color:"#ef4444",fontSize:10}}>Amount</span><span style={{color:"#ef4444",fontFamily:"monospace",fontSize:12,fontWeight:700}}>-{FX(a)}</span></div>
           <div style={{borderTop:"1px solid rgba(63,63,70,.5)",paddingTop:6,display:"flex",justifyContent:"space-between"}}><span style={{color:"#a1a1aa",fontSize:10}}>After</span><span style={{color:chBal-a>=0?"#22c55e":"#ef4444",fontFamily:"monospace",fontSize:13,fontWeight:700}}>{FX(chBal-a)}</span></div>
         </div>:null;
@@ -1276,7 +1291,7 @@ export default function App(){
       </div>
       {consigners.length===0?<div style={{textAlign:"center",padding:20,color:"#52525b",fontSize:12}}>No consigner balances to pay out</div>:<>
       <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:8}}>
-        <button onClick={()=>sPOSel(prev=>prev.size===consigners.length?new Set():new Set(consigners.map(c=>c.p)))} style={{padding:"4px 10px",borderRadius:4,border:"1px solid #3f3f46",background:poSel.size===consigners.length?"rgba(245,158,11,.1)":"transparent",color:poSel.size===consigners.length?"#f59e0b":"#52525b",cursor:"pointer",fontSize:8,fontWeight:600}}>{poSel.size===consigners.length?"Deselect All":"Select All"}</button>
+        <button onClick={()=>sPOSel(prev=>prev.size===consigners.length?new Set():new Set(consigners.map(c=>c.p)))} style={{padding:"4px 10px",borderRadius:4,border:"1px solid #3f3f46",background:poSel.size===consigners.length?`${AC}18`:"transparent",color:poSel.size===consigners.length?AC:"#52525b",cursor:"pointer",fontSize:8,fontWeight:600}}>{poSel.size===consigners.length?"Deselect All":"Select All"}</button>
         {consigners.map(c=>(<button key={c.p} onClick={()=>sPOSel(prev=>{const n=new Set(prev);n.has(c.p)?n.delete(c.p):n.add(c.p);return n;})} style={{padding:"3px 8px",borderRadius:4,border:`1px solid ${poSel.has(c.p)?CO[c.p]+"60":"#3f3f46"}`,background:poSel.has(c.p)?`${CO[c.p]}15`:"transparent",color:poSel.has(c.p)?CO[c.p]:"#52525b",cursor:"pointer",fontSize:8,fontWeight:600}}>{c.p} {FX(c.overall)}</button>))}
       </div>
       {poSel.size>0&&(()=>{const selected=consigners.filter(c=>poSel.has(c.p));const selTotal=selected.reduce((s,c)=>s+Math.abs(c.overall),0);return(
@@ -1320,14 +1335,14 @@ export default function App(){
               <div style={{display:"flex",alignItems:"center",gap:6}}>
                 <button onClick={()=>sPOSel(prev=>{const n=new Set(prev);n.has(c.p)?n.delete(c.p):n.add(c.p);return n;})} style={{width:16,height:16,borderRadius:3,border:`1px solid ${poSel.has(c.p)?CO[c.p]:"#3f3f46"}`,background:poSel.has(c.p)?CO[c.p]:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#000",fontWeight:900,padding:0}}>{poSel.has(c.p)?"✓":""}</button>
                 <div style={{width:8,height:8,borderRadius:"50%",background:CO[c.p]}}/><span style={{color:CO[c.p],fontWeight:700,fontSize:13}}>{c.p}</span></div>
-              <span style={{color:"#f59e0b",fontFamily:"monospace",fontSize:14,fontWeight:700}}>{FX(c.overall)}</span>
+              <span style={{color:AC,fontFamily:"monospace",fontSize:14,fontWeight:700}}>{FX(c.overall)}</span>
             </div>
             <div style={{display:"flex",gap:16,marginBottom:10}}>
               <div><span style={{color:"#52525b",fontSize:8}}>CASH</span><div style={{color:"#22c55e",fontFamily:"monospace",fontSize:11,fontWeight:600}}>{FX(c.cash)}</div></div>
               <div><span style={{color:"#52525b",fontSize:8}}>AMEX</span><div style={{color:"#3b82f6",fontFamily:"monospace",fontSize:11,fontWeight:600}}>{FX(c.amex)}</div></div>
             </div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              <button onClick={()=>{if(isExp){sPayExp(null);}else{sPayExp(c.p);sPayAmt(Math.abs(c.overall).toFixed(2));const cashAvail=Math.max(0,c.cash);const amexAvail=Math.max(0,c.amex);const total=Math.abs(c.overall);const fromCash=Math.min(cashAvail,total);sPayCash(fromCash.toFixed(2));sPayAmex(Math.max(0,total-fromCash).toFixed(2));sPayXfer("");}}} style={{padding:"5px 14px",borderRadius:5,border:`1px solid ${isExp?"#f59e0b40":"#ef444440"}`,background:isExp?"rgba(245,158,11,.1)":"rgba(239,68,68,.1)",color:isExp?"#f59e0b":"#ef4444",cursor:"pointer",fontSize:9,fontWeight:700}}>{isExp?"▼ Close":"💰 Pay Out"}</button>
+              <button onClick={()=>{if(isExp){sPayExp(null);}else{sPayExp(c.p);sPayAmt(Math.abs(c.overall).toFixed(2));const cashAvail=Math.max(0,c.cash);const amexAvail=Math.max(0,c.amex);const total=Math.abs(c.overall);const fromCash=Math.min(cashAvail,total);sPayCash(fromCash.toFixed(2));sPayAmex(Math.max(0,total-fromCash).toFixed(2));sPayXfer("");}}} style={{padding:"5px 14px",borderRadius:5,border:`1px solid ${isExp?"#f59e0b40":"#ef444440"}`,background:isExp?`${AC}18`:"rgba(239,68,68,.1)",color:isExp?"#f59e0b":"#ef4444",cursor:"pointer",fontSize:9,fontWeight:700}}>{isExp?"▼ Close":"💰 Pay Out"}</button>
               <button onClick={()=>{if(payExp===c.p+"_xfer"){sPayExp(null);}else{sPayExp(c.p+"_xfer");sPayXfer("");}}} style={{padding:"5px 10px",borderRadius:5,border:"1px solid #3b82f640",background:"rgba(59,130,246,.1)",color:"#3b82f6",cursor:"pointer",fontSize:9,fontWeight:600}}>↔ Transfer</button>
             </div>
             {payExp===c.p+"_xfer"&&<div style={{marginTop:10,padding:"12px",background:"rgba(59,130,246,.05)",borderRadius:8,border:"1px solid #3b82f620"}}>
@@ -1364,7 +1379,7 @@ export default function App(){
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:3}}><span style={{color:"#a1a1aa"}}>Payout total</span><span style={{color:"#ef4444",fontFamily:"monospace",fontWeight:700}}>{FX(total)}</span></div>
                   {fromCash>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:2}}><span style={{color:"#71717a"}}>From cash</span><span style={{color:"#22c55e",fontFamily:"monospace"}}>{FX(fromCash)}</span></div>}
                   {fromAmex>0&&<div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginBottom:2}}><span style={{color:"#71717a"}}>From amex</span><span style={{color:"#3b82f6",fontFamily:"monospace"}}>{FX(fromAmex)}</span></div>}
-                  {!match&&<div style={{color:"#f59e0b",fontSize:8,marginTop:4}}>⚠ Cash + Amex ({FX(sum)}) ≠ Total ({FX(total)})</div>}
+                  {!match&&<div style={{color:AC,fontSize:8,marginTop:4}}>⚠ Cash + Amex ({FX(sum)}) ≠ Total ({FX(total)})</div>}
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:9,marginTop:4,paddingTop:4,borderTop:"1px solid rgba(63,63,70,.3)"}}>
                     <span style={{color:"#a1a1aa"}}>Remaining balance</span><span style={{color:c.overall-total>=0?"#22c55e":"#ef4444",fontFamily:"monospace",fontWeight:700}}>{FX(c.overall-total)}</span></div>
                 </div>:null;
@@ -1443,7 +1458,7 @@ export default function App(){
       {(xfRecips||[]).map((r,i)=>{const cfg=(COMM[r.p]||DEF_COMM);const isOwner=OWNERS.has(r.p);const full=r.full||isOwner;const consignerRate=full?1:(1-cfg.rate);
         return(<div key={r.p} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",borderRadius:8,background:"rgba(63,63,70,.2)",border:`1px solid ${CO[r.p]}20`,flexWrap:"wrap"}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:CO[r.p]}}/><span style={{color:CO[r.p],fontWeight:600,fontSize:11,minWidth:50}}>{r.p}</span>
-          {!isOwner&&<button onClick={()=>{sXfRecips(prev=>prev.map((x,j)=>{if(j!==i)return x;const nf=!x.full;const rate=nf?1:(1-cfg.rate);return{...x,full:nf,amt:x.cardVal?String(Math.round(parseFloat(x.cardVal||0)*rate*100)/100):x.amt};}));}} style={{padding:"2px 6px",borderRadius:3,border:`1px solid ${full?"#f59e0b40":"#3f3f46"}`,background:full?"rgba(245,158,11,.1)":"transparent",color:full?"#f59e0b":"#52525b",cursor:"pointer",fontSize:7,fontWeight:600}}>{full?"FULL":"CONSIGNED"}</button>}
+          {!isOwner&&<button onClick={()=>{sXfRecips(prev=>prev.map((x,j)=>{if(j!==i)return x;const nf=!x.full;const rate=nf?1:(1-cfg.rate);return{...x,full:nf,amt:x.cardVal?String(Math.round(parseFloat(x.cardVal||0)*rate*100)/100):x.amt};}));}} style={{padding:"2px 6px",borderRadius:3,border:`1px solid ${full?`${AC}40`:T.border}`,background:full?`${AC}18`:"transparent",color:full?AC:"#52525b",cursor:"pointer",fontSize:7,fontWeight:600}}>{full?"FULL":"CONSIGNED"}</button>}
           <div style={{flex:1,display:"flex",gap:6,alignItems:"center"}}>
             <div><div style={{color:"#52525b",fontSize:7}}>{full?"AMOUNT":"CARD VALUE"}</div><input type="text" inputMode="decimal" value={r.cardVal||""} onChange={e=>{const v=e.target.value;sXfRecips(prev=>prev.map((x,j)=>j===i?{...x,cardVal:v,amt:String(Math.round(parseFloat(v||0)*consignerRate*100)/100)}:x));}} placeholder="$" style={{...is,width:70,padding:"4px 6px",fontSize:11}}/></div>
             {!full&&!isOwner&&<div style={{color:"#71717a",fontSize:8,textAlign:"center"}}><div>×{(consignerRate*100).toFixed(0)}%</div><div style={{fontSize:7}}>({(cfg.rate*100).toFixed(0)}% comm)</div></div>}
@@ -1497,7 +1512,7 @@ export default function App(){
       <div><div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:4}}>DATE</div><input type="date" value={cartDt} onChange={e=>sCartDt(e.target.value)} style={{...is,width:"100%",colorScheme:"dark"}}/></div>
       <div><div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:4}}>CHANNEL</div><select value={cartCh} onChange={e=>sCartCh(e.target.value)} style={{...is,width:"100%"}}>{Object.entries(CL).map(([k,v])=>(<option key={k} value={k}>{v}</option>))}</select></div>
     </div>
-    <div onDrop={handleImgDrop} onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor="#f59e0b";}} onDragLeave={e=>{e.currentTarget.style.borderColor="#3f3f46";}} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 12px",borderRadius:6,border:"1px dashed #3f3f46",transition:"border-color .15s"}}>
+    <div onDrop={handleImgDrop} onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=AC;}} onDragLeave={e=>{e.currentTarget.style.borderColor="#3f3f46";}} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 12px",borderRadius:6,border:"1px dashed #3f3f46",transition:"border-color .15s"}}>
       <label style={{color:"#71717a",cursor:"pointer",fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:4}}>
         📷 {cartImg?"Change":"Drop or click"}<input type="file" accept="image/*" onChange={handleCartImg} style={{display:"none"}}/>
       </label>
@@ -1513,7 +1528,7 @@ export default function App(){
       </div>
     </div>
     <div style={{background:"rgba(63,63,70,.3)",borderRadius:10,border:"1px solid rgba(63,63,70,.6)",padding:14,marginBottom:12}}>
-      <div style={{color:"#f59e0b",fontSize:10,fontWeight:700,marginBottom:8}}>⬇ RECEIVED (Trade In)</div>
+      <div style={{color:AC,fontSize:10,fontWeight:700,marginBottom:8}}>⬇ RECEIVED (Trade In)</div>
       <div style={{display:"flex",gap:6,alignItems:"flex-end",flexWrap:"wrap",marginBottom:6}}>
         <div style={{minWidth:80}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>TO</div><select value={ciP} onChange={e=>sCIP(e.target.value)} style={{...is,width:"100%",padding:"6px 8px",fontSize:11}}><optgroup label="MAIN" style={{background:"#27272a"}}>{["AJAY","DEREK","SHARED","LJ"].map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup><optgroup label="CONSIGNERS" style={{background:"#27272a"}}>{PP.filter(p=>!["AJAY","DEREK","SHARED","LJ"].includes(p)).sort().map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup></select></div>
         <div style={{flex:2,minWidth:80}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>ITEM</div><input value={ciN} onChange={e=>sCIN(e.target.value)} placeholder="Card/item received" style={{...is,width:"100%",padding:"6px 8px",fontSize:11}}/></div>
@@ -1666,7 +1681,7 @@ export default function App(){
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
           <span style={{color:"#71717a",fontSize:10,fontWeight:600}}>{filtered.length} of {entries.length} ENTRIES</span>
           <div style={{display:"flex",gap:6,alignItems:"center"}}>
-            <span style={{color:"#f59e0b",fontFamily:"monospace",fontSize:11,fontWeight:700}}>{FF(fTotal)}</span>
+            <span style={{color:AC,fontFamily:"monospace",fontSize:11,fontWeight:700}}>{FF(fTotal)}</span>
             {!viewOnly&&<button onClick={()=>{sLogSelMode(!logSelMode);sLogSel(new Set());}} style={{padding:"3px 8px",borderRadius:4,border:"1px solid #3f3f46",background:logSelMode?"rgba(239,68,68,.1)":"transparent",color:logSelMode?"#ef4444":"#555",cursor:"pointer",fontSize:9,fontWeight:600}}>{logSelMode?"Cancel":"Select"}</button>}
           </div>
         </div>
@@ -1675,7 +1690,7 @@ export default function App(){
           {logQ&&<button onClick={()=>sLogQ("")} style={{position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",background:"transparent",border:"none",color:"#71717a",cursor:"pointer",fontSize:11}}>×</button>}
         </div>
         {logQ.startsWith("#")&&entries.some(e=>e.ord===logQ&&e.io!=="REFUND")&&<button onClick={()=>{refundByOrder(logQ);sLogQ("");}} style={{width:"100%",padding:"6px",borderRadius:6,border:"1px solid #dc262640",background:"rgba(220,38,38,.1)",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700,marginBottom:8}}>🔴 Refund Order {logQ} ({entries.filter(e=>e.ord===logQ&&e.io!=="REFUND").length} entries)</button>}
-        {lastRefund&&<button onClick={undoRefund} style={{width:"100%",padding:"6px",borderRadius:6,border:"1px solid #f59e0b40",background:"rgba(245,158,11,.1)",color:"#f59e0b",cursor:"pointer",fontSize:10,fontWeight:700,marginBottom:8}}>↩ Undo Last Refund ({lastRefund.ids.length} entries)</button>}
+        {lastRefund&&<button onClick={undoRefund} style={{width:"100%",padding:"6px",borderRadius:6,border:`1px solid ${AC}40`,background:`${AC}18`,color:AC,cursor:"pointer",fontSize:10,fontWeight:700,marginBottom:8}}>↩ Undo Last Refund ({lastRefund.ids.length} entries)</button>}
         {logSelMode&&<div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
           <button onClick={()=>{const ids=new Set([...filtered].reverse().slice(0,100).map(e=>e.id));sLogSel(ids);}} style={{padding:"3px 8px",borderRadius:4,border:"none",background:"rgba(63,63,70,.7)",color:"#a1a1aa",cursor:"pointer",fontSize:9,fontWeight:600}}>Select All ({Math.min(filtered.length,100)})</button>
           <button onClick={()=>sLogSel(new Set())} style={{padding:"3px 8px",borderRadius:4,border:"none",background:"rgba(63,63,70,.7)",color:"#a1a1aa",cursor:"pointer",fontSize:9,fontWeight:600}}>Deselect</button>
@@ -1752,7 +1767,7 @@ export default function App(){
             return(<div key={g.key}>
               <div onClick={logSelMode?()=>{sLogSel(s=>{const n=new Set(s);g.entries.forEach(e=>{allSel?n.delete(e.id):n.add(e.id);});return n;});}:()=>sLogExp(s=>{const n=new Set(s);n.has(g.key)?n.delete(g.key):n.add(g.key);return n;})} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderBottom:isExp?"none":"1px solid rgba(63,63,70,.3)",background:allSel&&logSelMode?"rgba(239,68,68,.08)":"rgba(63,63,70,.15)",cursor:"pointer",flexWrap:"wrap"}}>
                 {logSelMode&&<div style={{width:16,height:16,borderRadius:4,border:`2px solid ${allSel?"#ef4444":"#52525b"}`,background:allSel?"#ef4444":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{allSel&&<span style={{color:"#fafafa",fontSize:10,fontWeight:900}}>✓</span>}</div>}
-                <span style={{color:isExp?"#f59e0b":"#71717a",fontSize:10,transition:"transform 0.15s",transform:isExp?"rotate(90deg)":"none",display:"inline-block"}}>▶</span>
+                <span style={{color:isExp?AC:T.muted,fontSize:10,transition:"transform 0.15s",transform:isExp?"rotate(90deg)":"none",display:"inline-block"}}>▶</span>
                 {g.type==="import"?<div style={{display:"flex",gap:3}}>{channels.map(ch=>(<span key={ch} style={{color:CC[ch]||"#a1a1aa",fontSize:8,fontWeight:700}}>{CL[ch]}</span>))}</div>
                 :<span style={{color:CC[g.ch]||"#a1a1aa",fontSize:8,fontWeight:700}}>{CL[g.ch]||"Cash"}</span>}
                 <div style={{display:"flex",gap:3,alignItems:"center"}}>{people.slice(0,4).map(p=>(<div key={p} style={{display:"flex",alignItems:"center",gap:2}}><div style={{width:5,height:5,borderRadius:"50%",background:CO[p]}}/><span style={{color:CO[p],fontSize:9,fontWeight:600}}>{p}</span></div>))}{people.length>4&&<span style={{color:"#71717a",fontSize:8}}>+{people.length-4}</span>}</div>
@@ -1889,10 +1904,10 @@ export default function App(){
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
           <div style={{...cr,padding:"10px",textAlign:"center"}}><div style={{color:"#52525b",fontSize:8}}>CASH</div><div style={{color:"#22c55e",fontFamily:"monospace",fontSize:13,fontWeight:700}}>{FX(bal.cash)}</div></div>
           <div style={{...cr,padding:"10px",textAlign:"center"}}><div style={{color:"#52525b",fontSize:8}}>AMEX</div><div style={{color:"#3b82f6",fontFamily:"monospace",fontSize:13,fontWeight:700}}>{FX(bal.amex)}</div></div>
-          <div style={{...cr,padding:"10px",textAlign:"center"}}><div style={{color:"#52525b",fontSize:8}}>TOTAL</div><div style={{color:"#f59e0b",fontFamily:"monospace",fontSize:13,fontWeight:700}}>{FX(bal.overall)}</div></div>
+          <div style={{...cr,padding:"10px",textAlign:"center"}}><div style={{color:"#52525b",fontSize:8}}>TOTAL</div><div style={{color:AC,fontFamily:"monospace",fontSize:13,fontWeight:700}}>{FX(bal.overall)}</div></div>
         </div>
         {!isOwner&&<div style={{...cr,padding:"10px",marginBottom:14,border:"1px solid rgba(63,63,70,.5)"}}>
-          <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"#71717a",fontSize:10}}>Commission Rate</span><span style={{color:"#f59e0b",fontFamily:"monospace",fontSize:11,fontWeight:700}}>{(cfg.rate*100).toFixed(0)}%</span></div>
+          <div style={{display:"flex",justifyContent:"space-between"}}><span style={{color:"#71717a",fontSize:10}}>Commission Rate</span><span style={{color:AC,fontFamily:"monospace",fontSize:11,fontWeight:700}}>{(cfg.rate*100).toFixed(0)}%</span></div>
           <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}><span style={{color:"#71717a",fontSize:10}}>Commission Split</span><span style={{color:"#a1a1aa",fontSize:10}}>{cfg.split==="BOTH"?"AJAY + DEREK":cfg.split}</span></div>
         </div>}
       </div>
@@ -1920,8 +1935,8 @@ export default function App(){
 
 {tab==="settings"&&(()=>{
   const isElectron=!!window.electronAPI;
-  const doBackupDownload=()=>{try{const bk={entries,bankTxns,pplInfo,exportedAt:new Date().toISOString(),version:"1.0"};const blob=new Blob([JSON.stringify(bk,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`unboxed-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);}catch(e){}};
-  const doRestore=(ev)=>{const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=(e)=>{try{const d=JSON.parse(e.target.result);if(d.entries){sE(d.entries);sv(d.entries);}if(d.bankTxns){sBankTxns(d.bankTxns);svBank(d.bankTxns);}if(d.pplInfo){sPplInfo(d.pplInfo);svPpl(d.pplInfo);}tw("✓ Backup restored — reloading...");setTimeout(()=>window.location.reload(),800);}catch(err){tw("⚠ Invalid backup file");}};reader.readAsText(file);ev.target.value="";};
+  const doBackupDownload=()=>{try{const bk={entries,bankTxns,pplInfo,uiCfg,exportedAt:new Date().toISOString(),version:"1.0"};const blob=new Blob([JSON.stringify(bk,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`unboxed-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);}catch(e){}};
+  const doRestore=(ev)=>{const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=(e)=>{try{const d=JSON.parse(e.target.result);if(d.entries){sE(d.entries);sv(d.entries);}if(d.bankTxns){sBankTxns(d.bankTxns);svBank(d.bankTxns);}if(d.pplInfo){sPplInfo(d.pplInfo);svPpl(d.pplInfo);}if(d.uiCfg){sUiCfg({...UI_DEF,...d.uiCfg});try{localStorage.setItem("ub-ui",JSON.stringify({...UI_DEF,...d.uiCfg}))}catch(x){}}tw("✓ Backup restored — reloading...");setTimeout(()=>window.location.reload(),800);}catch(err){tw("⚠ Invalid backup file");}};reader.readAsText(file);ev.target.value="";};
   const doUpdate=()=>{
     if(!isElectron)return;
     sUpStatus({status:"building",msg:"Building app..."});
@@ -1940,7 +1955,54 @@ export default function App(){
     {stgExp.has(id)&&<div style={{padding:"0 16px 16px"}}>{children}</div>}
   </div>);
   return(<div style={{maxWidth:480}}>
-    <div style={{color:"#f59e0b",fontSize:10,fontWeight:700,letterSpacing:1.5,marginBottom:16}}>⚙️ SETTINGS</div>
+    <div style={{color:AC,fontSize:10,fontWeight:700,letterSpacing:1.5,marginBottom:16}}>⚙️ SETTINGS</div>
+    <SH id="ui" icon="🎨" label="CUSTOMIZE UI">
+      <div style={{display:"flex",flexDirection:"column",gap:16}}>
+        <div>
+          <div style={{color:T.muted,fontSize:9,fontWeight:600,letterSpacing:1,marginBottom:8}}>ACCENT COLOR</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {[["#f59e0b","Amber"],["#3b82f6","Blue"],["#10b981","Green"],["#a78bfa","Purple"],["#ef4444","Red"],["#06b6d4","Cyan"]].map(([c,n])=>(<button key={c} onClick={()=>setUI("accent",c)} title={n} style={{width:28,height:28,borderRadius:"50%",border:AC===c?`3px solid ${T.text}`:`2px solid ${T.border}`,background:c,cursor:"pointer",transition:"transform .15s",transform:AC===c?"scale(1.15)":"scale(1)"}}/>))}
+          </div>
+        </div>
+        <div>
+          <div style={{color:T.muted,fontSize:9,fontWeight:600,letterSpacing:1,marginBottom:8}}>FONT SIZE</div>
+          <div style={{display:"flex",gap:6}}>
+            {[["sm","Small"],["md","Medium"],["lg","Large"]].map(([k,l])=>(<button key={k} onClick={()=>setUI("fontSize",k)} style={{padding:"5px 14px",borderRadius:6,border:`1px solid ${uiCfg.fontSize===k?`${AC}40`:T.border}`,background:uiCfg.fontSize===k?`${AC}18`:"transparent",color:uiCfg.fontSize===k?AC:T.subtle,cursor:"pointer",fontSize:11,fontWeight:600}}>{l}</button>))}
+          </div>
+        </div>
+        <div>
+          <div style={{color:T.muted,fontSize:9,fontWeight:600,letterSpacing:1,marginBottom:8}}>LAYOUT DENSITY</div>
+          <div style={{display:"flex",gap:6}}>
+            {[["compact","Compact"],["normal","Normal"],["spacious","Spacious"]].map(([k,l])=>(<button key={k} onClick={()=>setUI("density",k)} style={{padding:"5px 14px",borderRadius:6,border:`1px solid ${uiCfg.density===k?`${AC}40`:T.border}`,background:uiCfg.density===k?`${AC}18`:"transparent",color:uiCfg.density===k?AC:T.subtle,cursor:"pointer",fontSize:11,fontWeight:600}}>{l}</button>))}
+          </div>
+        </div>
+        <div>
+          <div style={{color:T.muted,fontSize:9,fontWeight:600,letterSpacing:1,marginBottom:8}}>THEME</div>
+          <div style={{display:"flex",gap:6}}>
+            {[["dark","Dark"],["light","Light"]].map(([k,l])=>(<button key={k} onClick={()=>setUI("theme",k)} style={{padding:"5px 14px",borderRadius:6,border:`1px solid ${uiCfg.theme===k?`${AC}40`:T.border}`,background:uiCfg.theme===k?`${AC}18`:"transparent",color:uiCfg.theme===k?AC:T.subtle,cursor:"pointer",fontSize:11,fontWeight:600}}>{l}</button>))}
+          </div>
+        </div>
+        <div>
+          <div style={{color:T.muted,fontSize:9,fontWeight:600,letterSpacing:1,marginBottom:8}}>TAB POSITION</div>
+          <div style={{display:"flex",gap:6}}>
+            {[["top","Top"],["bottom","Bottom"],["left","Left Sidebar"]].map(([k,l])=>(<button key={k} onClick={()=>setUI("tabPos",k)} style={{padding:"5px 14px",borderRadius:6,border:`1px solid ${uiCfg.tabPos===k?`${AC}40`:T.border}`,background:uiCfg.tabPos===k?`${AC}18`:"transparent",color:uiCfg.tabPos===k?AC:T.subtle,cursor:"pointer",fontSize:11,fontWeight:600}}>{l}</button>))}
+          </div>
+        </div>
+        <div>
+          <div style={{color:T.muted,fontSize:9,fontWeight:600,letterSpacing:1,marginBottom:8}}>VISIBLE SECTIONS</div>
+          <div style={{color:T.subtle,fontSize:9,marginBottom:6}}>Uncheck to hide sections</div>
+          <div style={{marginBottom:8}}>
+            <div style={{color:T.text,fontSize:10,fontWeight:700,marginBottom:4}}>Home</div>
+            {[["home.ytd","YTD Revenue"],["home.bank","Bank Accounts"],["home.balances","Account Balances"]].map(([k,l])=>(<label key={k} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,cursor:"pointer",fontSize:10,color:T.subtle}}><input type="checkbox" checked={!uiCfg.hidden?.[k]} onChange={()=>{const h={...(uiCfg.hidden||{})};if(h[k])delete h[k];else h[k]=true;setUI("hidden",h);}} style={{accentColor:AC}}/>{l}</label>))}
+          </div>
+          <div>
+            <div style={{color:T.text,fontSize:10,fontWeight:700,marginBottom:4}}>Analytics</div>
+            {[["analytics.daily","Daily"],["analytics.breakdown","Breakdown"],["analytics.channels","Channels"],["analytics.products","Products"],["analytics.consign","Consign"],["analytics.monthly","Monthly"],["analytics.growth","Growth"],["analytics.goal","Goal"]].map(([k,l])=>(<label key={k} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4,cursor:"pointer",fontSize:10,color:T.subtle}}><input type="checkbox" checked={!uiCfg.hidden?.[k]} onChange={()=>{const h={...(uiCfg.hidden||{})};if(h[k])delete h[k];else h[k]=true;setUI("hidden",h);}} style={{accentColor:AC}}/>{l}</label>))}
+          </div>
+        </div>
+        <button onClick={()=>{sUiCfg({...UI_DEF});try{localStorage.setItem("ub-ui",JSON.stringify(UI_DEF))}catch(e){}}} style={{padding:"6px 14px",borderRadius:6,border:`1px solid ${T.border}`,background:"transparent",color:T.muted,cursor:"pointer",fontSize:10,fontWeight:600,alignSelf:"flex-start"}}>Reset to Defaults</button>
+      </div>
+    </SH>
     <SH id="app" icon="📱" label="APP" badge={<span style={{color:"#52525b",fontSize:9,fontFamily:"monospace"}}>{__APP_VERSION__}</span>}>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1956,15 +2018,15 @@ export default function App(){
           <div style={{color:"#71717a",fontSize:10,marginBottom:12,lineHeight:1.6}}>Rebuilds the app with the latest code changes. The window will reload automatically when done.</div>
           {isElectron?(
             <div>
-              <button onClick={doUpdate} disabled={upStatus?.status==="building"} style={{padding:"8px 20px",borderRadius:7,border:"none",background:upStatus?.status==="building"?"#3f3f46":"#f59e0b",color:upStatus?.status==="building"?"#71717a":"#000",cursor:upStatus?.status==="building"?"not-allowed":"pointer",fontSize:12,fontWeight:700,marginBottom:upStatus?8:0}}>
+              <button onClick={doUpdate} disabled={upStatus?.status==="building"} style={{padding:"8px 20px",borderRadius:7,border:"none",background:upStatus?.status==="building"?"#3f3f46":AC,color:upStatus?.status==="building"?"#71717a":"#000",cursor:upStatus?.status==="building"?"not-allowed":"pointer",fontSize:12,fontWeight:700,marginBottom:upStatus?8:0}}>
                 {upStatus?.status==="building"?"⏳ Building...":"🔄 Update App"}
               </button>
-              {upStatus&&<div style={{padding:"8px 12px",borderRadius:6,background:upStatus.status==="error"?"rgba(239,68,68,.1)":upStatus.status==="success"?"rgba(16,185,129,.1)":"rgba(245,158,11,.08)",border:`1px solid ${upStatus.status==="error"?"#ef444430":upStatus.status==="success"?"#10b98130":"#f59e0b30"}`,color:upStatus.status==="error"?"#ef4444":upStatus.status==="success"?"#10b981":"#f59e0b",fontSize:10,fontFamily:"monospace",wordBreak:"break-word"}}>{upStatus.msg}</div>}
+              {upStatus&&<div style={{padding:"8px 12px",borderRadius:6,background:upStatus.status==="error"?"rgba(239,68,68,.1)":upStatus.status==="success"?"rgba(16,185,129,.1)":`${AC}14`,border:`1px solid ${upStatus.status==="error"?"#ef444430":upStatus.status==="success"?"#10b98130":"#f59e0b30"}`,color:upStatus.status==="error"?"#ef4444":upStatus.status==="success"?"#10b981":"#f59e0b",fontSize:10,fontFamily:"monospace",wordBreak:"break-word"}}>{upStatus.msg}</div>}
             </div>
           ):(
             <div style={{padding:"10px 14px",borderRadius:6,background:"rgba(63,63,70,.4)",border:"1px solid #3f3f46"}}>
               <div style={{color:"#a1a1aa",fontSize:10,marginBottom:6}}>Run this in your terminal:</div>
-              <code style={{color:"#f59e0b",fontSize:11,display:"block"}}>npm run electron:build</code>
+              <code style={{color:AC,fontSize:11,display:"block"}}>npm run electron:build</code>
               <div style={{color:"#52525b",fontSize:9,marginTop:6}}>Then reopen the app from <code style={{color:"#71717a"}}>release/win-unpacked/</code></div>
             </div>
           )}
@@ -1973,7 +2035,7 @@ export default function App(){
     </SH>
     <SH id="log" icon="📋" label="UPDATE LOG">
       {[
-        {v:"1.1.0",items:["View-only PIN (0201) for read-only access","Collapsible settings dropdowns","Auto-lock after 5 minutes of inactivity","Backup restore now reloads page so all data appears","Transaction log search by dollar amount","Keyword search in log — searches all words separately, use quotes for exact match","Sort log by newest, oldest, highest $, or lowest $"]},
+        {v:"1.1.0",items:["View-only PIN (0201) for read-only access","Collapsible settings dropdowns","Auto-lock after 5 minutes of inactivity","Backup restore now reloads page so all data appears","Transaction log search by dollar amount","Keyword search in log — searches all words separately, use quotes for exact match","Sort log by newest, oldest, highest $, or lowest $","Customize UI — accent color, font size, density, dark/light theme, tab position, toggle page sections"]},
         {v:"1.0.9",items:["Consigner payout with custom amount — choose how much to pay","Choose payout source — split between cash and amex accounts","Transfer between cash ↔ amex per consigner","Square imports: only assigned items apply, unassigned stay for later","Bank transactions and account balances now show decimals (.00)","Add photos to existing entries from the log","Consigners in Buy/Pull dropdown, split purchases, photo in Buy/Pull"]},
         {v:"1.0.7",items:["Export data as CSV — transactions, account balances, bank transactions, log","Export All button downloads all 4 CSVs at once","Drag-and-drop photo upload for orders & trades","Update log added to Settings"]},
         {v:"1.0.6",items:["Added photo attachment for manual orders & trades","Photos display as thumbnails in log, click to view full-size","Photos included in backup/restore"]},
@@ -1986,8 +2048,8 @@ export default function App(){
       ].map(rel=>(
         <div key={rel.v} style={{marginBottom:10}}>
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
-            <span style={{color:rel.v===__APP_VERSION__?"#f59e0b":"#71717a",fontFamily:"monospace",fontSize:11,fontWeight:700}}>{rel.v}</span>
-            {rel.v===__APP_VERSION__&&<span style={{color:"#f59e0b",fontSize:8,fontWeight:700,background:"rgba(245,158,11,.1)",padding:"1px 6px",borderRadius:4}}>CURRENT</span>}
+            <span style={{color:rel.v===__APP_VERSION__?AC:T.muted,fontFamily:"monospace",fontSize:11,fontWeight:700}}>{rel.v}</span>
+            {rel.v===__APP_VERSION__&&<span style={{color:AC,fontSize:8,fontWeight:700,background:`${AC}18`,padding:"1px 6px",borderRadius:4}}>CURRENT</span>}
           </div>
           <div style={{paddingLeft:8,borderLeft:"1px solid #3f3f4640"}}>
             {rel.items.map((it,i)=>(<div key={i} style={{color:"#a1a1aa",fontSize:10,lineHeight:1.7}}>• {it}</div>))}
@@ -2013,12 +2075,12 @@ export default function App(){
       <div style={{marginTop:10,background:"rgba(63,63,70,.4)",borderRadius:8,padding:"10px 14px"}}>
         <div style={{color:"#a1a1aa",fontSize:9,fontWeight:700,letterSpacing:1,marginBottom:6}}>EMAILJS TEMPLATE VARIABLES</div>
         <div style={{color:"#71717a",fontSize:9,lineHeight:1.8}}>Use these in your EmailJS template:<br/>
-          <code style={{color:"#f59e0b"}}>{"{{to_email}}"}</code> — consigner's email<br/>
-          <code style={{color:"#f59e0b"}}>{"{{to_name}}"}</code> — consigner's name<br/>
-          <code style={{color:"#f59e0b"}}>{"{{from_email}}"}</code> — your reply-to email<br/>
-          <code style={{color:"#f59e0b"}}>{"{{amount}}"}</code> — payout amount<br/>
-          <code style={{color:"#f59e0b"}}>{"{{from_date}}"}</code> — period start<br/>
-          <code style={{color:"#f59e0b"}}>{"{{to_date}}"}</code> — period end
+          <code style={{color:AC}}>{"{{to_email}}"}</code> — consigner's email<br/>
+          <code style={{color:AC}}>{"{{to_name}}"}</code> — consigner's name<br/>
+          <code style={{color:AC}}>{"{{from_email}}"}</code> — your reply-to email<br/>
+          <code style={{color:AC}}>{"{{amount}}"}</code> — payout amount<br/>
+          <code style={{color:AC}}>{"{{from_date}}"}</code> — period start<br/>
+          <code style={{color:AC}}>{"{{to_date}}"}</code> — period end
         </div>
       </div>
     </SH>}
@@ -2053,7 +2115,7 @@ export default function App(){
           <button onClick={expBal} style={btnS}>Account Balances</button>
           <button onClick={expBank} style={btnS}>Bank Transactions</button>
           <button onClick={expLog} style={btnS}>Log (sorted)</button>
-          <button onClick={expAll} style={{...btnS,background:"#f59e0b",color:"#000",border:"none",fontWeight:700}}>Export All</button>
+          <button onClick={expAll} style={{...btnS,background:AC,color:"#000",border:"none",fontWeight:700}}>Export All</button>
         </div>);
       })()}
     </SH>
@@ -2063,7 +2125,7 @@ export default function App(){
         <div style={{background:"rgba(63,63,70,.4)",borderRadius:8,padding:"10px 14px"}}>
           <div style={{color:"#a1a1aa",fontSize:9,fontWeight:700,letterSpacing:1,marginBottom:6}}>STEP 1 — PUSH TO GITHUB</div>
           <div style={{color:"#71717a",fontSize:10,marginBottom:4}}>Create a repo at <span style={{color:"#60a5fa"}}>github.com/new</span>, then run in terminal:</div>
-          <code style={{display:"block",color:"#f59e0b",fontSize:10,lineHeight:1.8}}>{"git remote add origin https://github.com/YOU/REPO.git"}<br/>{"git push -u origin main"}</code>
+          <code style={{display:"block",color:AC,fontSize:10,lineHeight:1.8}}>{"git remote add origin https://github.com/YOU/REPO.git"}<br/>{"git push -u origin main"}</code>
         </div>
         <div style={{background:"rgba(63,63,70,.4)",borderRadius:8,padding:"10px 14px"}}>
           <div style={{color:"#a1a1aa",fontSize:9,fontWeight:700,letterSpacing:1,marginBottom:6}}>STEP 2 — DEPLOY ON VERCEL</div>
@@ -2071,7 +2133,7 @@ export default function App(){
         </div>
         <div style={{background:"rgba(63,63,70,.4)",borderRadius:8,padding:"10px 14px"}}>
           <div style={{color:"#a1a1aa",fontSize:9,fontWeight:700,letterSpacing:1,marginBottom:6}}>ANOTHER WINDOWS PC</div>
-          <div style={{color:"#71717a",fontSize:10,lineHeight:1.6}}>Copy the <code style={{color:"#f59e0b"}}>release\win-unpacked</code> folder to the other PC — no install needed, just run the .exe inside.</div>
+          <div style={{color:"#71717a",fontSize:10,lineHeight:1.6}}>Copy the <code style={{color:AC}}>release\win-unpacked</code> folder to the other PC — no install needed, just run the .exe inside.</div>
         </div>
       </div>
     </SH>}
@@ -2079,7 +2141,8 @@ export default function App(){
       <button onClick={async()=>{try{localStorage.removeItem("ub-auth");}catch(e){}sAuthed(false);sLoginPw("");}} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #ef444430",background:"rgba(239,68,68,.08)",color:"#ef4444",cursor:"pointer",fontSize:11,fontWeight:600}}>🔒 Lock App</button>
     </SH>
   </div>);})()}
-      <div style={{color:"#222",fontSize:10,marginTop:28,textAlign:"center"}}>UNBOXED TCG · Arden Fair Mall<br/><button onClick={async()=>{try{(() => { try { localStorage.removeItem("ub-auth"); return true; } catch(e) { return null; } })();}catch(e){}sAuthed(false);sLoginPw("");}} style={{background:"transparent",border:"none",color:"#333",cursor:"pointer",fontSize:8,marginTop:4}}>🔒 Lock</button></div>
+      <div style={{color:T.muted,fontSize:10,marginTop:28,textAlign:"center",opacity:.4}}>UNBOXED TCG · Arden Fair Mall<br/><button onClick={async()=>{try{(() => { try { localStorage.removeItem("ub-auth"); return true; } catch(e) { return null; } })();}catch(e){}sAuthed(false);sLoginPw("");}} style={{background:"transparent",border:"none",color:T.muted,cursor:"pointer",fontSize:8,marginTop:4}}>🔒 Lock</button></div>
+      </div>{/* close content wrapper */}
     </div>
   </div>);
 }
