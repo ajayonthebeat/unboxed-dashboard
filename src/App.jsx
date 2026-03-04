@@ -87,7 +87,7 @@ export default function App(){
   const[dd,sDD]=useState(S_ALL);const[cd,sCD]=useState(S_C_NET);const[entries,sE]=useState([]);
   const[df,sDF]=useState(daysAgo(7));const[dt,sDT]=useState(TODAY);
   const[sp,sSP]=useState(["DEREK","AJAY","LJ","SHARED"]);const[search,sSR]=useState("");
-  const[authed,sAuthed]=useState(false);const[loginPw,sLoginPw]=useState("");const[showPw,sShowPw]=useState(false);
+  const[authed,sAuthed]=useState(false);const[viewOnly,sViewOnly]=useState(false);const[loginPw,sLoginPw]=useState("");const[showPw,sShowPw]=useState(false);
   const[pwStore,sPwStore]=useState({});
   const[upStatus,sUpStatus]=useState(null);const[lastBackup,sLastBackup]=useState(null);
   const[ejsCfg,sEjsCfg]=useState({serviceId:"",templateId:"",publicKey:"",fromEmail:""});
@@ -97,7 +97,11 @@ export default function App(){
     if(e.key==="-"){e.preventDefault();sZoomLvl(z=>{const n=Math.max(Math.round((z-0.1)*10)/10,0.5);try{localStorage.setItem("ub-zoom",String(n));}catch(x){}return n;});}
     if(e.key==="0"){e.preventDefault();sZoomLvl(1);try{localStorage.setItem("ub-zoom","1");}catch(x){}}};
     window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[]);
-  useEffect(()=>{(async()=>{try{const r=(() => { try { const v = localStorage.getItem("ub-auth"); return v ? { value: v } : null; } catch(e) { return null; } })();if(r?.value)sAuthed(true);}catch(e){}
+  useEffect(()=>{if(!authed)return;let timer=setTimeout(()=>{try{localStorage.removeItem("ub-auth");}catch(e){}sAuthed(false);sLoginPw("");},5*60*1000);
+    const reset=()=>{clearTimeout(timer);timer=setTimeout(()=>{try{localStorage.removeItem("ub-auth");}catch(e){}sAuthed(false);sLoginPw("");},5*60*1000);};
+    const evts=["mousemove","mousedown","keydown","touchstart","scroll"];evts.forEach(e=>window.addEventListener(e,reset));
+    return()=>{clearTimeout(timer);evts.forEach(e=>window.removeEventListener(e,reset));};},[authed]);
+  useEffect(()=>{(async()=>{try{const r=(() => { try { const v = localStorage.getItem("ub-auth"); return v ? { value: v } : null; } catch(e) { return null; } })();if(r?.value){sAuthed(true);if(r.value==="view")sViewOnly(true);}}catch(e){}
     try{const r=(() => { try { const v = localStorage.getItem("ub-vault"); return v ? { value: v } : null; } catch(e) { return null; } })();if(r?.value)sPwStore(JSON.parse(r.value));}catch(e){}
     try{const r=(() => { try { const v = localStorage.getItem("ub-ejs"); return v ? { value: v } : null; } catch(e) { return null; } })();if(r?.value)sEjsCfg(JSON.parse(r.value));}catch(e){}})();},[]);
   const svVault=async v=>{try{(() => { try { localStorage.setItem("ub-vault", JSON.stringify(v)); return { value: JSON.stringify(v) }; } catch(e) { return null; } })();}catch(e){}};
@@ -106,15 +110,16 @@ export default function App(){
     if(!ejsCfg.serviceId||!ejsCfg.templateId||!ejsCfg.publicKey){tw("⚠ Set up EmailJS in Settings first");return false;}
     try{const res=await fetch("https://api.emailjs.com/api/v1.0/email/send",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({service_id:ejsCfg.serviceId,template_id:ejsCfg.templateId,user_id:ejsCfg.publicKey,template_params:{to_email:toEmail,to_name:toName,from_email:ejsCfg.fromEmail||"noreply@unboxedtcg.com",amount:amount.toFixed(2),from_date:fromDate,to_date:toDate}})});if(!res.ok){const t=await res.text();throw new Error(t);}return true;}catch(e){tw(`⚠ Email failed: ${e?.message||"unknown error"}`);return false;}
   };
-  const PIN="2026";
+  const PINS={full:"2026",view:"0201"};
+  const tryLogin=(pw)=>{if(pw===PINS.full){sAuthed(true);sViewOnly(false);try{localStorage.setItem("ub-auth","full");}catch(e){}}else if(pw===PINS.view){sAuthed(true);sViewOnly(true);try{localStorage.setItem("ub-auth","view");}catch(e){}}else{sLoginPw("");alert("Wrong PIN");}};
   const loginScreen=(<div style={{minHeight:"100vh",background:"#09090b",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
     <div style={{width:"100%",maxWidth:340,textAlign:"center"}}>
       <div style={{fontSize:28,fontWeight:900,color:"#fafafa",marginBottom:4}}>UNBOXED TCG</div>
       <div style={{color:"#52525b",fontSize:10,marginBottom:32}}>Arden Fair Mall · Sacramento</div>
       <div style={{background:"rgba(24,24,27,.9)",borderRadius:12,padding:24,border:"1px solid #27272a"}}>
         <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:12}}>ENTER PIN</div>
-        <input type="password" value={loginPw} onChange={e=>sLoginPw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&loginPw===PIN){sAuthed(true);(() => { try { localStorage.setItem("ub-auth","1"); } catch(e) {} })();}}} placeholder="••••" style={{width:"100%",padding:"12px",borderRadius:8,border:"1px solid #3f3f46",background:"#18181b",color:"#fafafa",fontSize:18,textAlign:"center",letterSpacing:8,outline:"none",fontFamily:"monospace",marginBottom:12}}/>
-        <button onClick={()=>{if(loginPw===PIN){sAuthed(true);(() => { try { localStorage.setItem("ub-auth","1"); } catch(e) {} })();}else{sLoginPw("");alert("Wrong PIN");}}} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:"#f59e0b",color:"#000",cursor:"pointer",fontSize:13,fontWeight:700,marginBottom:16}}>Unlock</button>
+        <input type="password" value={loginPw} onChange={e=>sLoginPw(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")tryLogin(loginPw);}} placeholder="••••" style={{width:"100%",padding:"12px",borderRadius:8,border:"1px solid #3f3f46",background:"#18181b",color:"#fafafa",fontSize:18,textAlign:"center",letterSpacing:8,outline:"none",fontFamily:"monospace",marginBottom:12}}/>
+        <button onClick={()=>tryLogin(loginPw)} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:"#f59e0b",color:"#000",cursor:"pointer",fontSize:13,fontWeight:700,marginBottom:16}}>Unlock</button>
         <div style={{borderTop:"1px solid #27272a",paddingTop:16,marginTop:8}}>
           <div style={{color:"#71717a",fontSize:9,fontWeight:600,letterSpacing:1,marginBottom:10}}>🔒 SECURE NOTES</div>
           {Object.entries(pwStore).map(([k,v])=>(<div key={k} style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
@@ -132,7 +137,7 @@ export default function App(){
       </div>
     </div>
   </div>);
-  const[ct,sCT]=useState("area");const[tab,sTB]=useState("home");const[cv,sCV]=useState("stacked");const[bv,sBV]=useState("grouped");const[showTot,sSTot]=useState(false);const[visCh,sVisCh]=useState(["shopify","square","cash","amex"]);
+  const[ct,sCT]=useState("area");const[tab,sTB]=useState("home");const[cv,sCV]=useState("stacked");const[bv,sBV]=useState("grouped");const[showTot,sSTot]=useState(false);const[visCh,sVisCh]=useState(["shopify","square","cash","amex"]);const[stgExp,sStgExp]=useState(new Set());
   const[toast,sT]=useState(null);const[impItems,sII]=useState(null);const[impCh,sIC]=useState("");const[impFilter,sIF]=useState("all");
   const[stfP,sSTP]=useState(null);const[gV,sGV]=useState("cum");const[sec,sSEC]=useState("daily");
   const[gPP,sGPP]=useState(["AJAY","DEREK","SHARED","LJ"]);const[sdf,sSDF]=useState("2026-01-01");const[sdt,sSDT]=useState(TODAY);const[goalP,sGoalP]=useState("AJAY");
@@ -527,7 +532,8 @@ export default function App(){
             {sr.map(({n:p,t})=>(<div key={p} onClick={()=>{s1(p);sSR("");}} style={{padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",borderBottom:"1px solid rgba(63,63,70,.5)"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(63,63,70,.6)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:CO[p]}}/><span style={{fontWeight:600,fontSize:13}}>{p}</span></div><span style={{color:"#a1a1aa",fontFamily:"monospace",fontSize:12}}>{FF(t)}</span></div>))}</div>}</div>
       </div>
       <div style={{display:"flex",gap:2,marginBottom:20,background:"rgba(63,63,70,.3)",borderRadius:10,padding:3}}>
-        {[["home","🏠 Home"],["input","💳 Transactions"],["sales","📊 Analytics"],["people","👥 People"],["settings","⚙️ Settings"]].map(([id,lb])=>(<button key={id} onClick={()=>{sTB(id);if(id==="sales")sSEC("daily");if(id==="input")sSEC("manual");}} style={{flex:"0 0 auto",padding:"10px 14px",borderRadius:8,border:"none",background:tab===id?"#3f3f46":"transparent",color:tab===id?"#fafafa":"#71717a",cursor:"pointer",fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{lb}</button>))}
+        {[["home","🏠 Home"],["input","💳 Transactions"],["sales","📊 Analytics"],["people","👥 People"],["settings","⚙️ Settings"]].filter(([id])=>!(viewOnly&&id==="input")).map(([id,lb])=>(<button key={id} onClick={()=>{sTB(id);if(id==="sales")sSEC("daily");if(id==="input")sSEC("manual");}} style={{flex:"0 0 auto",padding:"10px 14px",borderRadius:8,border:"none",background:tab===id?"#3f3f46":"transparent",color:tab===id?"#fafafa":"#71717a",cursor:"pointer",fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>{lb}</button>))}
+        {viewOnly&&<div style={{display:"flex",alignItems:"center",marginLeft:"auto",padding:"4px 10px",borderRadius:6,background:"rgba(139,92,246,.15)",border:"1px solid rgba(139,92,246,.3)"}}><span style={{color:"#a78bfa",fontSize:9,fontWeight:700,letterSpacing:1}}>👁 VIEW ONLY</span></div>}
       </div>
 
 {/* ===== HOME ===== */}
@@ -1657,7 +1663,7 @@ export default function App(){
           <span style={{color:"#71717a",fontSize:10,fontWeight:600}}>{filtered.length} of {entries.length} ENTRIES</span>
           <div style={{display:"flex",gap:6,alignItems:"center"}}>
             <span style={{color:"#f59e0b",fontFamily:"monospace",fontSize:11,fontWeight:700}}>{FF(fTotal)}</span>
-            <button onClick={()=>{sLogSelMode(!logSelMode);sLogSel(new Set());}} style={{padding:"3px 8px",borderRadius:4,border:"1px solid #3f3f46",background:logSelMode?"rgba(239,68,68,.1)":"transparent",color:logSelMode?"#ef4444":"#555",cursor:"pointer",fontSize:9,fontWeight:600}}>{logSelMode?"Cancel":"Select"}</button>
+            {!viewOnly&&<button onClick={()=>{sLogSelMode(!logSelMode);sLogSel(new Set());}} style={{padding:"3px 8px",borderRadius:4,border:"1px solid #3f3f46",background:logSelMode?"rgba(239,68,68,.1)":"transparent",color:logSelMode?"#ef4444":"#555",cursor:"pointer",fontSize:9,fontWeight:600}}>{logSelMode?"Cancel":"Select"}</button>}
           </div>
         </div>
         <div style={{position:"relative",marginBottom:8}}>
@@ -1721,14 +1727,14 @@ export default function App(){
                 {e.ord&&<span style={{color:"#06b6d4",fontSize:8,fontWeight:600}}>{e.ord}</span>}
                 <span style={{flex:1}}/>
                 <span style={{color:"#a1a1aa",fontSize:9}}>{SD(e.d)}</span>
-                {!logSelMode&&(confirmDel===e.id?<div style={{display:"flex",gap:4}}>
+                {!viewOnly&&!logSelMode&&(confirmDel===e.id?<div style={{display:"flex",gap:4}}>
                   <button onClick={()=>{delE(e.id);sConfirmDel(null);}} style={{padding:"2px 8px",borderRadius:4,border:"none",background:"#ef4444",color:"#fafafa",cursor:"pointer",fontSize:9,fontWeight:700}}>Delete</button>
                   <button onClick={()=>sConfirmDel(null)} style={{padding:"2px 6px",borderRadius:4,border:"1px solid #3f3f46",background:"transparent",color:"#a1a1aa",cursor:"pointer",fontSize:9}}>Cancel</button>
                 </div>:<button onClick={()=>sConfirmDel(e.id)} style={{background:"transparent",border:"none",color:"#52525b",cursor:"pointer",fontSize:12}} onMouseEnter={e=>e.currentTarget.style.color="#ef4444"} onMouseLeave={e=>e.currentTarget.style.color="#333"}>×</button>)}
                 {itemText&&<div style={{width:"100%",paddingLeft:2}}><span style={{color:"#71717a",fontSize:8}}>{itemText}</span></div>}
                 <div style={{width:"100%",paddingLeft:2,marginTop:3,display:"flex",alignItems:"center",gap:6}}>
                   {e.img&&<img src={e.img} onClick={ev=>{ev.stopPropagation();sViewImg(e.img);}} style={{height:40,borderRadius:4,cursor:"pointer",border:"1px solid #3f3f46"}}/>}
-                  {!logSelMode&&<label onClick={ev=>ev.stopPropagation()} style={{color:"#52525b",cursor:"pointer",fontSize:9,display:"inline-flex",alignItems:"center",gap:2}}>📷 {e.img?"change":"add"}<input type="file" accept="image/*" onChange={ev=>{const f=ev.target.files[0];if(f)addImgToEntry(e.id,f);ev.target.value="";}} style={{display:"none"}}/></label>}
+                  {!viewOnly&&!logSelMode&&<label onClick={ev=>ev.stopPropagation()} style={{color:"#52525b",cursor:"pointer",fontSize:9,display:"inline-flex",alignItems:"center",gap:2}}>📷 {e.img?"change":"add"}<input type="file" accept="image/*" onChange={ev=>{const f=ev.target.files[0];if(f)addImgToEntry(e.id,f);ev.target.value="";}} style={{display:"none"}}/></label>}
                 </div>
               </div>);
             }
@@ -1752,7 +1758,7 @@ export default function App(){
                 {itemSummary&&<div style={{width:"100%",paddingLeft:20,marginTop:2}}><span style={{color:"#71717a",fontSize:8}}>{itemSummary}</span></div>}
                 {(()=>{const img=g.entries.find(e=>e.img)?.img;const grpKey=g.type==="cart"?g.key:null;return(<div style={{width:"100%",paddingLeft:20,marginTop:3,display:"flex",alignItems:"center",gap:6}}>
                   {img&&<img src={img} onClick={ev=>{ev.stopPropagation();sViewImg(img);}} style={{height:40,borderRadius:4,cursor:"pointer",border:"1px solid #3f3f46"}}/>}
-                  {!logSelMode&&grpKey&&<label onClick={ev=>ev.stopPropagation()} style={{color:"#52525b",cursor:"pointer",fontSize:9,display:"inline-flex",alignItems:"center",gap:2}}>📷 {img?"change":"add"}<input type="file" accept="image/*" onChange={ev=>{const f=ev.target.files[0];if(f)addImgToGroup(grpKey,f);ev.target.value="";}} style={{display:"none"}}/></label>}
+                  {!viewOnly&&!logSelMode&&grpKey&&<label onClick={ev=>ev.stopPropagation()} style={{color:"#52525b",cursor:"pointer",fontSize:9,display:"inline-flex",alignItems:"center",gap:2}}>📷 {img?"change":"add"}<input type="file" accept="image/*" onChange={ev=>{const f=ev.target.files[0];if(f)addImgToGroup(grpKey,f);ev.target.value="";}} style={{display:"none"}}/></label>}
                 </div>);})()}
               </div>
               {isExp&&<div style={{borderBottom:"1px solid rgba(63,63,70,.3)"}}>
@@ -1889,8 +1895,8 @@ export default function App(){
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {fields.map(f=>(<div key={f.k}>
             <div style={{color:"#71717a",fontSize:9,fontWeight:600,marginBottom:3}}>{f.l}</div>
-            {f.multi?<textarea value={info[f.k]||""} onChange={e=>updateField(f.k,e.target.value)} placeholder={f.ph} rows={3} style={{...is,width:"100%",padding:"6px 8px",fontSize:11,resize:"vertical",fontFamily:"inherit"}}/>
-            :<input value={info[f.k]||""} onChange={e=>updateField(f.k,e.target.value)} placeholder={f.ph} style={{...is,width:"100%",padding:"6px 8px",fontSize:11}}/>}
+            {f.multi?<textarea value={info[f.k]||""} onChange={e=>{if(!viewOnly)updateField(f.k,e.target.value);}} readOnly={viewOnly} placeholder={viewOnly?"":f.ph} rows={3} style={{...is,width:"100%",padding:"6px 8px",fontSize:11,resize:"vertical",fontFamily:"inherit",opacity:viewOnly&&!info[f.k]?0.3:1}}/>
+            :<input value={info[f.k]||""} onChange={e=>{if(!viewOnly)updateField(f.k,e.target.value);}} readOnly={viewOnly} placeholder={viewOnly?"":f.ph} style={{...is,width:"100%",padding:"6px 8px",fontSize:11,opacity:viewOnly&&!info[f.k]?0.3:1}}/>}
           </div>))}
         </div>
         {info.email&&<div style={{marginTop:12,display:"flex",gap:6}}>
@@ -1915,10 +1921,21 @@ export default function App(){
     sUpStatus({status:"building",msg:"Building app..."});
     window.electronAPI.updateApp(data=>sUpStatus(data));
   };
+  const togStg=k=>sStgExp(s=>{const n=new Set(s);n.has(k)?n.delete(k):n.add(k);return n;});
+  const SH=({id,icon,label,children,badge})=>(<div style={{...cr,marginBottom:8,overflow:"hidden"}}>
+    <div onClick={()=>togStg(id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 16px",cursor:"pointer",userSelect:"none"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontSize:12}}>{icon}</span>
+        <span style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1}}>{label}</span>
+        {badge}
+      </div>
+      <span style={{color:"#52525b",fontSize:10,transition:"transform .2s",transform:stgExp.has(id)?"rotate(180deg)":"rotate(0)"}}>{"\u25BC"}</span>
+    </div>
+    {stgExp.has(id)&&<div style={{padding:"0 16px 16px"}}>{children}</div>}
+  </div>);
   return(<div style={{maxWidth:480}}>
     <div style={{color:"#f59e0b",fontSize:10,fontWeight:700,letterSpacing:1.5,marginBottom:16}}>⚙️ SETTINGS</div>
-    <div style={{...cr,padding:"18px",marginBottom:12}}>
-      <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:14}}>APP</div>
+    <SH id="app" icon="📱" label="APP" badge={<span style={{color:"#52525b",fontSize:9,fontFamily:"monospace"}}>{__APP_VERSION__}</span>}>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{color:"#71717a",fontSize:11}}>Version</span>
@@ -1928,7 +1945,7 @@ export default function App(){
           <span style={{color:"#71717a",fontSize:11}}>Platform</span>
           <span style={{color:"#fafafa",fontFamily:"monospace",fontSize:11}}>{isElectron?"Electron Desktop":"Browser"}</span>
         </div>
-        <div style={{borderTop:"1px solid #3f3f46",paddingTop:12,marginTop:2}}>
+        {!viewOnly&&<div style={{borderTop:"1px solid #3f3f46",paddingTop:12,marginTop:2}}>
           <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:10}}>UPDATE APP</div>
           <div style={{color:"#71717a",fontSize:10,marginBottom:12,lineHeight:1.6}}>Rebuilds the app with the latest code changes. The window will reload automatically when done.</div>
           {isElectron?(
@@ -1945,11 +1962,10 @@ export default function App(){
               <div style={{color:"#52525b",fontSize:9,marginTop:6}}>Then reopen the app from <code style={{color:"#71717a"}}>release/win-unpacked/</code></div>
             </div>
           )}
-        </div>
+        </div>}
       </div>
-    </div>
-    <div style={{...cr,padding:"18px",marginBottom:12}}>
-      <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:12}}>UPDATE LOG</div>
+    </SH>
+    <SH id="log" icon="📋" label="UPDATE LOG">
       {[
         {v:"1.0.9",items:["Consigner payout with custom amount — choose how much to pay","Choose payout source — split between cash and amex accounts","Transfer between cash ↔ amex per consigner","Square imports: only assigned items apply, unassigned stay for later","Bank transactions and account balances now show decimals (.00)","Add photos to existing entries from the log","Consigners in Buy/Pull dropdown, split purchases, photo in Buy/Pull"]},
         {v:"1.0.7",items:["Export data as CSV — transactions, account balances, bank transactions, log","Export All button downloads all 4 CSVs at once","Drag-and-drop photo upload for orders & trades","Update log added to Settings"]},
@@ -1971,9 +1987,8 @@ export default function App(){
           </div>
         </div>
       ))}
-    </div>
-    <div style={{...cr,padding:"18px",marginBottom:12}}>
-      <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:10}}>📧 EMAIL NOTIFICATIONS</div>
+    </SH>
+    {!viewOnly&&<SH id="email" icon="📧" label="EMAIL NOTIFICATIONS" badge={<span style={{color:ejsCfg.serviceId&&ejsCfg.templateId&&ejsCfg.publicKey?"#22c55e":"#ef4444",fontSize:8}}>●</span>}>
       <div style={{color:"#71717a",fontSize:10,marginBottom:12,lineHeight:1.6}}>Auto-send payout confirmation emails to consigners. Sign up at <span style={{color:"#60a5fa"}}>emailjs.com</span> (free 200 emails/month), create a service + template, then paste your keys below.</div>
       <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
         {[{k:"serviceId",l:"Service ID",ph:"e.g. service_abc123"},{k:"templateId",l:"Template ID",ph:"e.g. template_xyz789"},{k:"publicKey",l:"Public Key",ph:"e.g. aBcDeFgHiJkLm"},{k:"fromEmail",l:"Your Email (reply-to)",ph:"e.g. you@gmail.com"}].map(f=>(
@@ -1999,9 +2014,8 @@ export default function App(){
           <code style={{color:"#f59e0b"}}>{"{{to_date}}"}</code> — period end
         </div>
       </div>
-    </div>
-    <div style={{...cr,padding:"18px",marginBottom:12}}>
-      <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:10}}>DATA BACKUP</div>
+    </SH>}
+    {!viewOnly&&<SH id="backup" icon="💾" label="DATA BACKUP" badge={lastBackup&&<span style={{color:"#52525b",fontSize:8}}>{lastBackup}</span>}>
       <div style={{color:"#71717a",fontSize:10,marginBottom:10,lineHeight:1.6}}>Saves entries, bank transactions, and people data. Auto-backup runs every 10 minutes in the background.</div>
       {lastBackup&&<div style={{color:"#52525b",fontSize:9,marginBottom:10}}>Last auto-backup: <span style={{color:"#71717a",fontFamily:"monospace"}}>{lastBackup}</span></div>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -2011,9 +2025,8 @@ export default function App(){
           <input type="file" accept=".json" style={{display:"none"}} onChange={doRestore}/>
         </label>
       </div>
-    </div>
-    <div style={{...cr,padding:"18px",marginBottom:12}}>
-      <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:10}}>EXPORT DATA</div>
+    </SH>}
+    <SH id="export" icon="📤" label="EXPORT DATA">
       <div style={{color:"#71717a",fontSize:10,marginBottom:12,lineHeight:1.6}}>Export your data as CSV files for spreadsheets or record-keeping.</div>
       {(()=>{
         const dl=(name,csv)=>{const blob=new Blob([csv],{type:"text/csv"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`${name}-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);};
@@ -2036,9 +2049,8 @@ export default function App(){
           <button onClick={expAll} style={{...btnS,background:"#f59e0b",color:"#000",border:"none",fontWeight:700}}>Export All</button>
         </div>);
       })()}
-    </div>
-    <div style={{...cr,padding:"18px",marginBottom:12}}>
-      <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:10}}>GET ON ANOTHER DEVICE</div>
+    </SH>
+    {!viewOnly&&<SH id="device" icon="🖥" label="GET ON ANOTHER DEVICE">
       <div style={{color:"#71717a",fontSize:10,marginBottom:12,lineHeight:1.6}}>Deploy the web version so you can open it in any browser on your iMac or another PC. Your data stays local — use Download Backup then Restore Backup to move it across devices.</div>
       <div style={{display:"flex",flexDirection:"column",gap:8}}>
         <div style={{background:"rgba(63,63,70,.4)",borderRadius:8,padding:"10px 14px"}}>
@@ -2055,11 +2067,10 @@ export default function App(){
           <div style={{color:"#71717a",fontSize:10,lineHeight:1.6}}>Copy the <code style={{color:"#f59e0b"}}>release\win-unpacked</code> folder to the other PC — no install needed, just run the .exe inside.</div>
         </div>
       </div>
-    </div>
-    <div style={{...cr,padding:"18px"}}>
-      <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:14}}>ACCOUNT</div>
+    </SH>}
+    <SH id="account" icon="🔒" label="ACCOUNT">
       <button onClick={async()=>{try{localStorage.removeItem("ub-auth");}catch(e){}sAuthed(false);sLoginPw("");}} style={{padding:"8px 16px",borderRadius:7,border:"1px solid #ef444430",background:"rgba(239,68,68,.08)",color:"#ef4444",cursor:"pointer",fontSize:11,fontWeight:600}}>🔒 Lock App</button>
-    </div>
+    </SH>
   </div>);})()}
       <div style={{color:"#222",fontSize:10,marginTop:28,textAlign:"center"}}>UNBOXED TCG · Arden Fair Mall<br/><button onClick={async()=>{try{(() => { try { localStorage.removeItem("ub-auth"); return true; } catch(e) { return null; } })();}catch(e){}sAuthed(false);sLoginPw("");}} style={{background:"transparent",border:"none",color:"#333",cursor:"pointer",fontSize:8,marginTop:4}}>🔒 Lock</button></div>
     </div>
