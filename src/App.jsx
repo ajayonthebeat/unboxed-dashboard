@@ -1653,7 +1653,7 @@ export default function App(){
       if(logIO==="refund"&&e.io!=="REFUND")return false;
       if(logDF&&e.d<logDF)return false;
       if(logDT&&e.d>logDT)return false;
-      if(q&&!(e.r||"").toLowerCase().includes(q)&&!(e.p||"").toLowerCase().includes(q)&&!(e.ord||"").toLowerCase().includes(q)&&!(e.io||"").toLowerCase().includes(q))return false;
+      if(q&&!(e.r||"").toLowerCase().includes(q)&&!(e.p||"").toLowerCase().includes(q)&&!(e.ord||"").toLowerCase().includes(q)&&!(e.io||"").toLowerCase().includes(q)&&!String(e.a).includes(q))return false;
       return true;});
     const fTotal=filtered.reduce((s,e)=>s+e.a,0);
     const logPeople=[...new Set(entries.map(e=>e.p))].sort();
