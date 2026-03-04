@@ -1971,6 +1971,7 @@ export default function App(){
     </SH>
     <SH id="log" icon="📋" label="UPDATE LOG">
       {[
+        {v:"1.1.0",items:["View-only PIN (0201) for read-only access","Collapsible settings dropdowns","Auto-lock after 5 minutes of inactivity","Backup restore now reloads page so all data appears","Transaction log search by dollar amount","Keyword search in log — searches all words separately, use quotes for exact match"]},
         {v:"1.0.9",items:["Consigner payout with custom amount — choose how much to pay","Choose payout source — split between cash and amex accounts","Transfer between cash ↔ amex per consigner","Square imports: only assigned items apply, unassigned stay for later","Bank transactions and account balances now show decimals (.00)","Add photos to existing entries from the log","Consigners in Buy/Pull dropdown, split purchases, photo in Buy/Pull"]},
         {v:"1.0.7",items:["Export data as CSV — transactions, account balances, bank transactions, log","Export All button downloads all 4 CSVs at once","Drag-and-drop photo upload for orders & trades","Update log added to Settings"]},
         {v:"1.0.6",items:["Added photo attachment for manual orders & trades","Photos display as thumbnails in log, click to view full-size","Photos included in backup/restore"]},
