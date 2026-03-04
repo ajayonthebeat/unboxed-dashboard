@@ -145,7 +145,7 @@ export default function App(){
   const[bankTxns,sBankTxns]=useState([]);const[bkAcct,sBkAcct]=useState("AMEX");const[bkType,sBkType]=useState("deposit");const[bkAmt,sBkAmt]=useState("");const[bkNote,sBkNote]=useState("");const[bkDt,sBkDt]=useState(TODAY);const[bkPerson,sBkPerson]=useState("AJAY");
   const[xfFrom,sXfFrom]=useState("AJAY");const[xfTo,sXfTo]=useState("DEREK");const[xfFromCh,sXfFromCh]=useState("cash");const[xfToCh,sXfToCh]=useState("cash");const[xfAmt,sXfAmt]=useState("");const[xfNote,sXfNote]=useState("");const[xfDt,sXfDt]=useState(TODAY);const[xfRecips,sXfRecips]=useState([]);const[xfSenders,sXfSenders]=useState([{p:"AJAY",amt:""}]);
   const[poP,sPOP]=useState("AJAY");const[poCh,sPOCh]=useState("cash");const[poAmt,sPOAmt]=useState("");const[poNote,sPONote]=useState("");const[poDt,sPODt]=useState(TODAY);const[poType,sPOType]=useState("BUY");const[poFrom,sPOFrom]=useState(daysAgo(7));const[poSel,sPOSel]=useState(new Set());const[poSplitOn,sPOSplitOn]=useState(false);const[poSplitPpl,sPOSplitPpl]=useState(new Set(["AJAY","DEREK"]));const[payExp,sPayExp]=useState(null);const[payAmt,sPayAmt]=useState("");const[payCash,sPayCash]=useState("");const[payAmex,sPayAmex]=useState("");const[payXfer,sPayXfer]=useState("");
-  const[logCh,sLogCh]=useState("all");const[logP,sLogP]=useState("all");const[logIO,sLogIO]=useState("all");const[logDF,sLogDF]=useState("");const[logDT,sLogDT]=useState("");const[confirmDel,sConfirmDel]=useState(null);const[logSel,sLogSel]=useState(new Set());const[logSelMode,sLogSelMode]=useState(false);const[logExp,sLogExp]=useState(new Set());const[logQ,sLogQ]=useState("");const[selPerson,sSelPerson]=useState(null);const[pplInfo,sPplInfo]=useState({});const[pplTab,sPplTab]=useState("directory");const[prodView,sProdView]=useState("all");const[prodSort,sProdSort]=useState("revenue");
+  const[logCh,sLogCh]=useState("all");const[logP,sLogP]=useState("all");const[logIO,sLogIO]=useState("all");const[logDF,sLogDF]=useState("");const[logDT,sLogDT]=useState("");const[confirmDel,sConfirmDel]=useState(null);const[logSel,sLogSel]=useState(new Set());const[logSelMode,sLogSelMode]=useState(false);const[logExp,sLogExp]=useState(new Set());const[logQ,sLogQ]=useState("");const[logSort,sLogSort]=useState("newest");const[selPerson,sSelPerson]=useState(null);const[pplInfo,sPplInfo]=useState({});const[pplTab,sPplTab]=useState("directory");const[prodView,sProdView]=useState("all");const[prodSort,sProdSort]=useState("revenue");
   // Reactive person balances: base S_B + manual entries affect cash/amex per channel
   const balances=useMemo(()=>{const b={};Object.entries(S_B).forEach(([p,v])=>{b[p]={cash:v.cash,amex:v.amex,overall:v.overall};});
     entries.forEach(e=>{if(!b[e.p])b[e.p]={cash:0,amex:0,overall:0};
@@ -1695,11 +1695,13 @@ export default function App(){
           <div style={{flex:1}}/>
           <input type="date" value={logDF} onChange={e=>sLogDF(e.target.value)} style={{...is,fontSize:9,padding:"3px 6px",colorScheme:"dark",width:110}}/><span style={{color:"#52525b",fontSize:9}}>→</span><input type="date" value={logDT} onChange={e=>sLogDT(e.target.value)} style={{...is,fontSize:9,padding:"3px 6px",colorScheme:"dark",width:110}}/>
           {(logDF||logDT)&&<button onClick={()=>{sLogDF("");sLogDT("");}} style={{background:"transparent",border:"none",color:"#a1a1aa",cursor:"pointer",fontSize:10}}>✕</button>}
+          <button onClick={()=>sLogSort(s=>s==="newest"?"oldest":s==="oldest"?"high":"high"===s?"low":"newest")} style={{padding:"3px 8px",borderRadius:4,border:"1px solid #3f3f46",background:"rgba(63,63,70,.3)",color:"#a1a1aa",cursor:"pointer",fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{logSort==="newest"?"⬇ Newest":logSort==="oldest"?"⬆ Oldest":logSort==="high"?"⬇ $High":"⬆ $Low"}</button>
         </div>
       </div>
       <div style={{maxHeight:400,overflowY:"auto"}}>
         {(()=>{
-          const rev=[...filtered].reverse().slice(0,200);
+          const sorted=logSort==="newest"?[...filtered].reverse():logSort==="oldest"?[...filtered]:logSort==="high"?[...filtered].sort((a,b)=>b.a-a.a):[...filtered].sort((a,b)=>a.a-b.a);
+          const rev=sorted.slice(0,200);
           // Build groups: cart orders by grp, shopify/square by day, others standalone
           const groups=[];const seen=new Set();
           rev.forEach(e=>{
@@ -1971,7 +1973,7 @@ export default function App(){
     </SH>
     <SH id="log" icon="📋" label="UPDATE LOG">
       {[
-        {v:"1.1.0",items:["View-only PIN (0201) for read-only access","Collapsible settings dropdowns","Auto-lock after 5 minutes of inactivity","Backup restore now reloads page so all data appears","Transaction log search by dollar amount","Keyword search in log — searches all words separately, use quotes for exact match"]},
+        {v:"1.1.0",items:["View-only PIN (0201) for read-only access","Collapsible settings dropdowns","Auto-lock after 5 minutes of inactivity","Backup restore now reloads page so all data appears","Transaction log search by dollar amount","Keyword search in log — searches all words separately, use quotes for exact match","Sort log by newest, oldest, highest $, or lowest $"]},
         {v:"1.0.9",items:["Consigner payout with custom amount — choose how much to pay","Choose payout source — split between cash and amex accounts","Transfer between cash ↔ amex per consigner","Square imports: only assigned items apply, unassigned stay for later","Bank transactions and account balances now show decimals (.00)","Add photos to existing entries from the log","Consigners in Buy/Pull dropdown, split purchases, photo in Buy/Pull"]},
         {v:"1.0.7",items:["Export data as CSV — transactions, account balances, bank transactions, log","Export All button downloads all 4 CSVs at once","Drag-and-drop photo upload for orders & trades","Update log added to Settings"]},
         {v:"1.0.6",items:["Added photo attachment for manual orders & trades","Photos display as thumbnails in log, click to view full-size","Photos included in backup/restore"]},
