@@ -1915,7 +1915,7 @@ export default function App(){
 {tab==="settings"&&(()=>{
   const isElectron=!!window.electronAPI;
   const doBackupDownload=()=>{try{const bk={entries,bankTxns,pplInfo,exportedAt:new Date().toISOString(),version:"1.0"};const blob=new Blob([JSON.stringify(bk,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`unboxed-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);}catch(e){}};
-  const doRestore=(ev)=>{const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=(e)=>{try{const d=JSON.parse(e.target.result);if(d.entries){sE(d.entries);sv(d.entries);}if(d.bankTxns){sBankTxns(d.bankTxns);svBank(d.bankTxns);}if(d.pplInfo){sPplInfo(d.pplInfo);svPpl(d.pplInfo);}tw("✓ Backup restored");}catch(err){tw("⚠ Invalid backup file");}};reader.readAsText(file);ev.target.value="";};
+  const doRestore=(ev)=>{const file=ev.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=(e)=>{try{const d=JSON.parse(e.target.result);if(d.entries){sE(d.entries);sv(d.entries);}if(d.bankTxns){sBankTxns(d.bankTxns);svBank(d.bankTxns);}if(d.pplInfo){sPplInfo(d.pplInfo);svPpl(d.pplInfo);}tw("✓ Backup restored — reloading...");setTimeout(()=>window.location.reload(),800);}catch(err){tw("⚠ Invalid backup file");}};reader.readAsText(file);ev.target.value="";};
   const doUpdate=()=>{
     if(!isElectron)return;
     sUpStatus({status:"building",msg:"Building app..."});
