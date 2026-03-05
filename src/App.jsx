@@ -161,7 +161,7 @@ export default function App(){
     </div>
   </div>);
   const[ct,sCT]=useState("area");const[tab,sTB]=useState("home");const[cv,sCV]=useState("stacked");const[bv,sBV]=useState("grouped");const[showTot,sSTot]=useState(false);const[visCh,sVisCh]=useState(["shopify","square","cash","amex"]);const[stgExp,sStgExp]=useState(new Set());
-  const[toast,sT]=useState(null);const[impItems,sII]=useState(null);const[impCh,sIC]=useState("");const[impFilter,sIF]=useState("all");const[discMode,sDiscMode]=useState(false);
+  const[toast,sT]=useState(null);const[impItems,sII]=useState(null);const[impCh,sIC]=useState("");const[impFilter,sIF]=useState("all");const[discMode,sDiscMode]=useState(false);const[impSrc,sImpSrc]=useState("");
   const[stfP,sSTP]=useState(null);const[gV,sGV]=useState("cum");const[sec,sSEC]=useState("daily");
   const[gPP,sGPP]=useState(["AJAY","DEREK","SHARED","LJ"]);const[sdf,sSDF]=useState("2026-01-01");const[sdt,sSDT]=useState(TODAY);const[goalP,sGoalP]=useState("AJAY");
   const[cart,sCart]=useState([]);const[ciP,sCIP]=useState("AJAY");const[ciN,sCIN]=useState("");const[ciQ,sCIQ]=useState("1");const[ciA,sCIA]=useState("");const[ciIO,sCIIO]=useState("IN");const[cartCh,sCartCh]=useState("cash");const[cartDt,sCartDt]=useState(TODAY);const[bkSort,sBkSort]=useState({col:"date",dir:"desc"});const[itemCat,sItemCat]=useState("");const[sealGame,sSealGame]=useState("");const[sealSeries,sSealSeries]=useState("");const[sealSub,sSealSub]=useState("");const[sealType,sSealType]=useState("");const[cartImg,sCartImg]=useState(null);const[viewImg,sViewImg]=useState(null);
@@ -341,7 +341,7 @@ export default function App(){
   const flagDupes=(items)=>{const existOrd=new Set(entries.filter(e=>e.ord).map(e=>e.ord));
     return items.map(it=>it.order&&existOrd.has(it.order)?{...it,fl:[...it.fl,"duplicate"]}:it);};
   const handleFile=(e,type)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();
-    reader.onload=ev=>{const r=type==="shopify"?parseShopifyCSV(ev.target.result):parseSquareCSV(ev.target.result,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");sSEC("manual");};reader.readAsText(file);e.target.value="";};
+    reader.onload=ev=>{const r=type==="shopify"?parseShopifyCSV(ev.target.result):parseSquareCSV(ev.target.result,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");sImpSrc(type);sSEC("manual");};reader.readAsText(file);e.target.value="";};
   const editOwner=(id,nw)=>{sII(prev=>prev.map(it=>it.id===id?{...it,owner:nw,fl:it.fl.filter(f=>f!=="unknown")}:it));};
   const editSplit=(id,field,val)=>{sII(prev=>prev.map(it=>it.id===id?{...it,[field]:val}:it));};
   const editSplits=(id,splits)=>{sII(prev=>prev.map(it=>it.id===id?{...it,splits}:it));};
@@ -448,7 +448,7 @@ export default function App(){
         }
       }
     }
-    if(impCh==="square"){for(let i=entries.length;i<ne.length;i++){ne[i]={...ne[i],src:"square"};}}
+    if(impSrc){for(let i=entries.length;i<ne.length;i++){ne[i]={...ne[i],src:impSrc};}}
     sE(ne);sv(ne);
     const nd={...S_ALL},nc={...S_C_NET};ne.forEach(e=>{if(e.io==="IN"||e.io==="CONSIGNMENT"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}});
     sDD({...nd});sCD({...nc});const remaining=impItems.filter(it=>it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0)&&!it.fl.includes("refunded"));
@@ -1063,7 +1063,7 @@ export default function App(){
     <div
       onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=AC;e.currentTarget.style.background=`${AC}0d`;}}
       onDragLeave={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";}}
-      onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";const f=e.dataTransfer.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const txt=ev.target.result;const type=txt.includes("Lineitem name")||txt.includes("Financial Status")?"shopify":"square";const r=type==="shopify"?parseShopifyCSV(txt):parseSquareCSV(txt,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");tw(`✓ Detected ${type==="shopify"?"Shopify":"Square"} CSV`);}catch(err){tw("⚠ Error reading file")}};reader.readAsText(f);}}
+      onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";const f=e.dataTransfer.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const txt=ev.target.result;const type=txt.includes("Lineitem name")||txt.includes("Financial Status")?"shopify":"square";const r=type==="shopify"?parseShopifyCSV(txt):parseSquareCSV(txt,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");sImpSrc(type);tw(`✓ Detected ${type==="shopify"?"Shopify":"Square"} CSV`);}catch(err){tw("⚠ Error reading file")}};reader.readAsText(f);}}
       style={{display:"flex",gap:6,marginBottom:14,alignItems:"center",flexWrap:"wrap",padding:"8px 12px",borderRadius:8,border:"1px dashed #3f3f46",transition:"all .2s"}}>
       <span style={{color:"#71717a",fontSize:9,fontWeight:600}}>📁 Drop CSV or:</span>
       {[["shopify","🛒 Shopify"],["square","⬛ Square"]].map(([type,label])=>(
@@ -1075,7 +1075,7 @@ export default function App(){
     {discMode&&<div style={{...cr,padding:"12px",marginBottom:10}}>
       <div style={{color:"#7c3aed",fontSize:10,fontWeight:600,marginBottom:6}}>📋 Paste Discord Order</div>
       <textarea id="disc-paste" placeholder="Paste Discord order message here..." style={{...is,width:"100%",minHeight:100,resize:"vertical",fontFamily:"monospace",fontSize:10,marginBottom:8}}/>
-      <button onClick={()=>{const txt=document.getElementById("disc-paste").value;if(!txt.trim()){tw("⚠ Paste an order first");return;}const r=parseDiscord(txt);if(r.items.length===0){tw("⚠ No items found");return;}const flagged=flagDupes(r.items);const dupeCount=flagged.filter(i=>i.fl.includes("duplicate")).length;sII(flagged);sIC(r.channel);sIF("all");sDiscMode(false);tw(dupeCount?`✓ Parsed ${r.items.length} items (⚠ ${dupeCount} already imported)`:`✓ Parsed ${r.items.length} items from Discord`);}} style={{padding:"6px 16px",borderRadius:6,border:"none",background:"#7c3aed",color:"#fafafa",cursor:"pointer",fontSize:11,fontWeight:700}}>Import</button>
+      <button onClick={()=>{const txt=document.getElementById("disc-paste").value;if(!txt.trim()){tw("⚠ Paste an order first");return;}const r=parseDiscord(txt);if(r.items.length===0){tw("⚠ No items found");return;}const flagged=flagDupes(r.items);const dupeCount=flagged.filter(i=>i.fl.includes("duplicate")).length;sII(flagged);sIC(r.channel);sIF("all");sImpSrc("discord");sDiscMode(false);tw(dupeCount?`✓ Parsed ${r.items.length} items (⚠ ${dupeCount} already imported)`:`✓ Parsed ${r.items.length} items from Discord`);}} style={{padding:"6px 16px",borderRadius:6,border:"none",background:"#7c3aed",color:"#fafafa",cursor:"pointer",fontSize:11,fontWeight:700}}>Import</button>
     </div>}
     {/* === IMPORT PREVIEW === */}
     {impItems&&impStats&&<>
@@ -1699,7 +1699,7 @@ export default function App(){
     const qWords=isExact?null:q.split(/\s+/).filter(Boolean);
     const matchQ=(e)=>{const hay=[(e.r||""),(e.p||""),(e.ord||""),(e.io||""),String(e.a)].join(" ").toLowerCase();if(isExact)return hay.includes(q);return qWords.every(w=>hay.includes(w));};
     const filtered=entries.filter(e=>{
-      if(logCh!=="all"&&!(e.c===logCh||(logCh==="square"&&e.src==="square")))return false;
+      if(logCh!=="all"&&!(e.c===logCh||(logCh==="square"&&e.src==="square")||(logCh==="discord"&&e.src==="discord")))return false;
       if(logP!=="all"&&e.p!==logP)return false;
       if(logIO==="in"&&!(e.io==="IN"||e.io==="CONSIGNMENT"||e.io==="TRADE_IN"||e.io==="XFER_IN"))return false;
       if(logIO==="out"&&(e.io==="IN"||e.io==="CONSIGNMENT"||e.io==="TRADE_IN"||e.io==="XFER_IN"||e.io==="REFUND"))return false;
@@ -1726,15 +1726,19 @@ export default function App(){
         {logQ.startsWith("#")&&entries.some(e=>e.ord===logQ&&e.io!=="REFUND")&&<button onClick={()=>{refundByOrder(logQ);sLogQ("");}} style={{width:"100%",padding:"6px",borderRadius:6,border:"1px solid #dc262640",background:"rgba(220,38,38,.1)",color:"#dc2626",cursor:"pointer",fontSize:10,fontWeight:700,marginBottom:8}}>🔴 Refund Order {logQ} ({entries.filter(e=>e.ord===logQ&&e.io!=="REFUND").length} entries)</button>}
         {lastRefund&&<button onClick={undoRefund} style={{width:"100%",padding:"6px",borderRadius:6,border:`1px solid ${AC}40`,background:`${AC}18`,color:AC,cursor:"pointer",fontSize:10,fontWeight:700,marginBottom:8}}>↩ Undo Last Refund ({lastRefund.ids.length} entries)</button>}
         {logSelMode&&<div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
-          <button onClick={()=>{const ids=new Set([...filtered].reverse().slice(0,100).map(e=>e.id));sLogSel(ids);}} style={{padding:"3px 8px",borderRadius:4,border:"none",background:"rgba(63,63,70,.7)",color:"#a1a1aa",cursor:"pointer",fontSize:9,fontWeight:600}}>Select All ({Math.min(filtered.length,100)})</button>
+          <button onClick={()=>{const ids=new Set(filtered.map(e=>e.id));sLogSel(ids);}} style={{padding:"3px 8px",borderRadius:4,border:"none",background:"rgba(63,63,70,.7)",color:"#a1a1aa",cursor:"pointer",fontSize:9,fontWeight:600}}>Select All ({filtered.length})</button>
           <button onClick={()=>sLogSel(new Set())} style={{padding:"3px 8px",borderRadius:4,border:"none",background:"rgba(63,63,70,.7)",color:"#a1a1aa",cursor:"pointer",fontSize:9,fontWeight:600}}>Deselect</button>
           {logSel.size>0&&<button onClick={()=>{const ne=entries.filter(x=>!logSel.has(x.id));sE(ne);sv(ne);
             const nd={...S_ALL},nc={...S_C_NET};ne.forEach(e=>{if(e.io==="IN"||e.io==="CONSIGNMENT"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}});
             sDD({...nd});sCD({...nc});tw(`✓ Deleted ${logSel.size} entries`);sLogSel(new Set());sLogSelMode(false);}} style={{padding:"3px 10px",borderRadius:4,border:"none",background:"#ef4444",color:"#fafafa",cursor:"pointer",fontSize:9,fontWeight:700}}>Delete {logSel.size} selected</button>}
         </div>}
         <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
-          {["all","shopify","square","cash","amex"].map(k=>(<button key={k} onClick={()=>sLogCh(k)} style={{padding:"3px 8px",borderRadius:4,border:"none",background:logCh===k?"#3f3f46":"transparent",color:logCh===k?(k==="all"?"#fff":CC[k]):"#444",cursor:"pointer",fontSize:9,fontWeight:600}}>{k==="all"?"All":CL[k]}</button>))}
+          {["all","shopify","square","cash","amex","discord"].map(k=>(<button key={k} onClick={()=>sLogCh(k)} style={{padding:"3px 8px",borderRadius:4,border:"none",background:logCh===k?"#3f3f46":"transparent",color:logCh===k?(k==="all"?"#fff":k==="discord"?"#7c3aed":CC[k]):"#444",cursor:"pointer",fontSize:9,fontWeight:600}}>{k==="all"?"All":k==="discord"?"📋 Discord":CL[k]}</button>))}
         </div>
+        {logCh==="discord"&&filtered.length>0&&!logSelMode&&<div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8,padding:"6px 10px",borderRadius:6,border:"1px solid #7c3aed30",background:"rgba(124,58,237,.06)"}}>
+          <span style={{color:"#7c3aed",fontSize:10,fontWeight:600,flex:1}}>📋 {filtered.length} Discord entries</span>
+          <button onClick={()=>{sLogSelMode(true);const ids=new Set(filtered.map(e=>e.id));sLogSel(ids);}} style={{padding:"4px 10px",borderRadius:5,border:"none",background:"#7c3aed",color:"#fafafa",cursor:"pointer",fontSize:9,fontWeight:700}}>Select All</button>
+        </div>}
         <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
           <button onClick={()=>sLogP("all")} style={{padding:"3px 8px",borderRadius:4,border:"none",background:logP==="all"?"#3f3f46":"transparent",color:logP==="all"?"#fff":"#444",cursor:"pointer",fontSize:9,fontWeight:600}}>All</button>
           {logPeople.map(p=>(<button key={p} onClick={()=>sLogP(p)} style={{padding:"3px 8px",borderRadius:4,border:"none",background:logP===p?`${CO[p]}20`:"transparent",color:logP===p?CO[p]:"#444",cursor:"pointer",fontSize:9,fontWeight:600}}>{p}</button>))}
