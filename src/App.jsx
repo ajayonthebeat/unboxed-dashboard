@@ -449,7 +449,7 @@ export default function App(){
     }
     if(impCh==="square"){for(let i=entries.length;i<ne.length;i++){ne[i]={...ne[i],src:"square"};}}
     sE(ne);sv(ne);const nd={...dd},nc={...cd};
-    for(const e of ne.slice(entries.length)){if(e.io==="IN"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}}
+    for(const e of ne.slice(entries.length)){if(e.io==="IN"||e.io==="CONSIGNMENT"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}}
     sDD({...nd});sCD({...nc});const remaining=impItems.filter(it=>it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0)&&!it.fl.includes("refunded"));
     tw(`✓ Imported ${ne.length-entries.length} entries${refCnt>0?` (${refCnt} refunded skipped)`:""}${remaining.length?` · ${remaining.length} still unassigned`:""}`);sII(remaining.length>0?remaining:null);};
 
