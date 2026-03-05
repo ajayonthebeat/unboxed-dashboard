@@ -1710,12 +1710,12 @@ export default function App(){
           <div style={{flex:1}}/>
           <input type="date" value={logDF} onChange={e=>sLogDF(e.target.value)} style={{...is,fontSize:9,padding:"3px 6px",colorScheme:"dark",width:110}}/><span style={{color:"#52525b",fontSize:9}}>→</span><input type="date" value={logDT} onChange={e=>sLogDT(e.target.value)} style={{...is,fontSize:9,padding:"3px 6px",colorScheme:"dark",width:110}}/>
           {(logDF||logDT)&&<button onClick={()=>{sLogDF("");sLogDT("");}} style={{background:"transparent",border:"none",color:"#a1a1aa",cursor:"pointer",fontSize:10}}>✕</button>}
-          <button onClick={()=>sLogSort(s=>s==="newest"?"oldest":s==="oldest"?"high":"high"===s?"low":"newest")} style={{padding:"3px 8px",borderRadius:4,border:"1px solid #3f3f46",background:"rgba(63,63,70,.3)",color:"#a1a1aa",cursor:"pointer",fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{logSort==="newest"?"⬇ Newest":logSort==="oldest"?"⬆ Oldest":logSort==="high"?"⬇ $High":"⬆ $Low"}</button>
+          <button onClick={()=>sLogSort(s=>s==="newest"?"oldest":s==="oldest"?"dateNew":s==="dateNew"?"dateOld":s==="dateOld"?"high":"high"===s?"low":"newest")} style={{padding:"3px 8px",borderRadius:4,border:`1px solid ${T.border}`,background:"rgba(63,63,70,.3)",color:"#a1a1aa",cursor:"pointer",fontSize:9,fontWeight:600,whiteSpace:"nowrap"}}>{logSort==="newest"?"⬇ Newest":logSort==="oldest"?"⬆ Oldest":logSort==="dateNew"?"⬇ Date New":logSort==="dateOld"?"⬆ Date Old":logSort==="high"?"⬇ $High":"⬆ $Low"}</button>
         </div>
       </div>
       <div style={{maxHeight:400,overflowY:"auto"}}>
         {(()=>{
-          const sorted=logSort==="newest"?[...filtered].reverse():logSort==="oldest"?[...filtered]:logSort==="high"?[...filtered].sort((a,b)=>b.a-a.a):[...filtered].sort((a,b)=>a.a-b.a);
+          const sorted=logSort==="newest"?[...filtered].reverse():logSort==="oldest"?[...filtered]:logSort==="dateNew"?[...filtered].sort((a,b)=>b.d>a.d?1:b.d<a.d?-1:0):logSort==="dateOld"?[...filtered].sort((a,b)=>a.d>b.d?1:a.d<b.d?-1:0):logSort==="high"?[...filtered].sort((a,b)=>b.a-a.a):[...filtered].sort((a,b)=>a.a-b.a);
           const rev=sorted.slice(0,200);
           // Build groups: cart orders by grp, shopify/square by day, others standalone
           const groups=[];const seen=new Set();
