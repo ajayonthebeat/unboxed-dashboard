@@ -1760,11 +1760,11 @@ export default function App(){
             // Old cart entries with cartItems but no grp - also group by ordId
             } else if(e.ordId){const siblings=rev.filter(x=>x.ordId===e.ordId&&!seen.has(x.id));siblings.forEach(x=>seen.add(x.id));
               groups.push({type:"cart",key:e.ordId,ch:e.c,d:e.d,entries:siblings,total:siblings.reduce((s,x)=>s+x.a,0)});
-            // Shopify/Square import group by day — include all channels from same day (cash splits etc)
-            } else if((e.c==="shopify"||e.c==="square"||e.src==="square")&&e.ord){
-              const dayKey=`imp-${e.d}`;const siblings=rev.filter(x=>!x.grp&&!x.ordId&&x.d===e.d&&x.ord&&!seen.has(x.id));
+            // Group by order ID (POS-xxx, PVT-xxx, Shopify orders, etc)
+            } else if(e.ord){
+              const siblings=rev.filter(x=>!x.grp&&!x.ordId&&x.ord===e.ord&&!seen.has(x.id));
               if(siblings.length>1){siblings.forEach(x=>seen.add(x.id));
-                groups.push({type:"import",key:dayKey,ch:"multi",d:e.d,entries:siblings,total:siblings.reduce((s,x)=>{const isI=x.io==="IN"||x.io==="CONSIGNMENT";return s+(isI?x.a:0);},0)});
+                groups.push({type:"import",key:`ord-${e.ord}`,ch:e.c,d:e.d,ord:e.ord,entries:siblings,total:siblings.reduce((s,x)=>{const isI=x.io==="IN"||x.io==="CONSIGNMENT";return s+(isI?x.a:0);},0)});
               } else {seen.add(e.id);groups.push({type:"single",key:e.id,entries:[e]});}
             } else {seen.add(e.id);groups.push({type:"single",key:e.id,entries:[e]});}
           });
@@ -1801,7 +1801,7 @@ export default function App(){
               <div onClick={logSelMode?()=>{sLogSel(s=>{const n=new Set(s);g.entries.forEach(e=>{allSel?n.delete(e.id):n.add(e.id);});return n;});}:()=>sLogExp(s=>{const n=new Set(s);n.has(g.key)?n.delete(g.key):n.add(g.key);return n;})} style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderBottom:isExp?"none":"1px solid rgba(63,63,70,.3)",background:allSel&&logSelMode?"rgba(239,68,68,.08)":"rgba(63,63,70,.15)",cursor:"pointer",flexWrap:"wrap"}}>
                 {logSelMode&&<div style={{width:16,height:16,borderRadius:4,border:`2px solid ${allSel?"#ef4444":"#52525b"}`,background:allSel?"#ef4444":"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{allSel&&<span style={{color:"#fafafa",fontSize:10,fontWeight:900}}>✓</span>}</div>}
                 <span style={{color:isExp?AC:T.muted,fontSize:10,transition:"transform 0.15s",transform:isExp?"rotate(90deg)":"none",display:"inline-block"}}>▶</span>
-                {g.type==="import"?<div style={{display:"flex",gap:3}}>{channels.map(ch=>(<span key={ch} style={{color:CC[ch]||"#a1a1aa",fontSize:8,fontWeight:700}}>{CL[ch]}</span>))}</div>
+                {g.type==="import"?<><div style={{display:"flex",gap:3}}>{channels.map(ch=>(<span key={ch} style={{color:CC[ch]||"#a1a1aa",fontSize:8,fontWeight:700}}>{CL[ch]}</span>))}</div>{g.ord&&<span style={{color:"#06b6d4",fontSize:9,fontWeight:800,fontFamily:"monospace"}}>{g.ord}</span>}</>
                 :<span style={{color:CC[g.ch]||"#a1a1aa",fontSize:8,fontWeight:700}}>{CL[g.ch]||"Cash"}</span>}
                 <div style={{display:"flex",gap:3,alignItems:"center"}}>{people.slice(0,4).map(p=>(<div key={p} style={{display:"flex",alignItems:"center",gap:2}}><div style={{width:5,height:5,borderRadius:"50%",background:CO[p]}}/><span style={{color:CO[p],fontSize:9,fontWeight:600}}>{p}</span></div>))}{people.length>4&&<span style={{color:"#71717a",fontSize:8}}>+{people.length-4}</span>}</div>
                 <span style={{color:"#22c55e",fontFamily:"monospace",fontSize:10,fontWeight:700}}>{FX(g.total)}</span>
