@@ -78,8 +78,6 @@ function parseDiscord(text){const blocks=text.split(/(?=🛒|🤝)/);const allIt
       const im=l.match(/^[•·\-]\s*(.+?)\s*(?:—|=)\s*\$([0-9,.]+)\s*\((\w+)\)\s*$/);
       if(im){const name=im[1].split('—')[0].trim().substring(0,80);const amt=parseFloat(im[2].replace(/,/g,""))||0;const ow=im[3].toUpperCase();const owner=PP.includes(ow)?ow:"UNKNOWN";
         if(amt>0)allItems.push({id:allItems.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:txnId,device:"",ch:channel});}}
-    const txM=block.match(/\+\s*\$([0-9,.]+)\s*tax/i);
-    if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)allItems.push({id:allItems.length,date,name:"Tax",amt:tax,owner:"SHARED",fl:["tax"],order:txnId,device:"",ch:channel});}
     if(allItems.length>0)mainCh=channel;}
   return{items:allItems,channel:mainCh};}
 const TT=({active,payload,label})=>{if(!active||!payload)return null;const it=payload.filter(p=>p.value>0&&p.dataKey!=="_t"&&p.dataKey!=="_total").sort((a,b)=>b.value-a.value);const tot=it.reduce((s,p)=>s+p.value,0);
