@@ -69,16 +69,19 @@ function parseSquareCSV(t,pplInfo){const{data:rows}=Papa.parse(t,{header:true,sk
     if(!n||n==="nan")fl.push("no_notes");
     items.push({id:items.length,date,name:n||"Custom Amount",amt,owner,fl,device:dev,order:""});}
   return{items,channel:"square"};}
-function parseDiscord(text){const lines=text.split('\n').map(l=>l.trim());const items=[];let channel="cash";const date=new Date().toISOString().slice(0,10);
-  for(let i=0;i<lines.length;i++){const l=lines[i];
-    if(/^payment$/i.test(l)&&lines[i+1]){const pm=lines[i+1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
-    const pmM=l.match(/^payment[:\s]+(.+)/i);if(pmM){const pm=pmM[1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
-    const im=l.match(/^[•·\-]\s*(.+?)\s*—\s*\$([0-9,.]+)\s*\((\w+)\)\s*$/);
-    if(im){const name=im[1].trim().substring(0,80);const amt=parseFloat(im[2].replace(/,/g,""))||0;const ow=im[3].toUpperCase();const owner=PP.includes(ow)?ow:"UNKNOWN";
-      if(amt>0)items.push({id:items.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:"",device:""});}}
-  const txM=text.match(/\+\s*\$([0-9,.]+)\s*tax/i);
-  if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)items.push({id:items.length,date,name:"Tax",amt:tax,owner:"SHARED",fl:["tax"],order:"",device:""});}
-  return{items,channel};}
+function parseDiscord(text){const blocks=text.split(/(?=🛒)/);const allItems=[];let mainCh="cash";const date=new Date().toISOString().slice(0,10);
+  for(const block of blocks){if(!block.trim())continue;const lines=block.split('\n').map(l=>l.trim());let channel="cash";let txnId="";
+    const txIdM=block.match(/Transaction:\s*(POS-[A-Z0-9]+)/i);if(txIdM)txnId=txIdM[1];
+    for(let i=0;i<lines.length;i++){const l=lines[i];
+      if(/^payment$/i.test(l)&&lines[i+1]){const pm=lines[i+1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
+      const pmM=l.match(/^payment[:\s]+(.+)/i);if(pmM){const pm=pmM[1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
+      const im=l.match(/^[•·\-]\s*(.+?)\s*—\s*\$([0-9,.]+)\s*\((\w+)\)\s*$/);
+      if(im){const name=im[1].trim().substring(0,80);const amt=parseFloat(im[2].replace(/,/g,""))||0;const ow=im[3].toUpperCase();const owner=PP.includes(ow)?ow:"UNKNOWN";
+        if(amt>0)allItems.push({id:allItems.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:txnId,device:""});}}
+    const txM=block.match(/\+\s*\$([0-9,.]+)\s*tax/i);
+    if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)allItems.push({id:allItems.length,date,name:"Tax",amt:tax,owner:"SHARED",fl:["tax"],order:txnId,device:""});}
+    if(allItems.length>0)mainCh=channel;}
+  return{items:allItems,channel:mainCh};}
 const TT=({active,payload,label})=>{if(!active||!payload)return null;const it=payload.filter(p=>p.value>0&&p.dataKey!=="_t"&&p.dataKey!=="_total").sort((a,b)=>b.value-a.value);const tot=it.reduce((s,p)=>s+p.value,0);
   return(<div style={{background:"#27272a",border:"1px solid #3f3f46",borderRadius:10,padding:"12px 16px",boxShadow:"0 8px 32px rgba(0,0,0,.5)",minWidth:150}}>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,gap:16}}><span style={{color:"#fafafa",fontWeight:700,fontSize:12}}>{label}</span><span style={{color:AC,fontWeight:700,fontSize:11,fontFamily:"monospace"}}>{FF(tot)}</span></div>
