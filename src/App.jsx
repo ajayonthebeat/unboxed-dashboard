@@ -75,8 +75,8 @@ function parseDiscord(text){const blocks=text.split(/(?=🛒)/);const allItems=[
     for(let i=0;i<lines.length;i++){const l=lines[i];
       if(/^payment$/i.test(l)&&lines[i+1]){const pm=lines[i+1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
       const pmM=l.match(/^payment[:\s]+(.+)/i);if(pmM){const pm=pmM[1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
-      const im=l.match(/^[•·\-]\s*(.+?)\s*—\s*\$([0-9,.]+)\s*\((\w+)\)\s*$/);
-      if(im){const name=im[1].trim().substring(0,80);const amt=parseFloat(im[2].replace(/,/g,""))||0;const ow=im[3].toUpperCase();const owner=PP.includes(ow)?ow:"UNKNOWN";
+      const im=l.match(/^[•·\-]\s*(.+?)\s*(?:—|=)\s*\$([0-9,.]+)\s*\((\w+)\)\s*$/);
+      if(im){const name=im[1].split('—')[0].trim().substring(0,80);const amt=parseFloat(im[2].replace(/,/g,""))||0;const ow=im[3].toUpperCase();const owner=PP.includes(ow)?ow:"UNKNOWN";
         if(amt>0)allItems.push({id:allItems.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:txnId,device:""});}}
     const txM=block.match(/\+\s*\$([0-9,.]+)\s*tax/i);
     if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)allItems.push({id:allItems.length,date,name:"Tax",amt:tax,owner:"SHARED",fl:["tax"],order:txnId,device:""});}
