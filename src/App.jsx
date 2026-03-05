@@ -39,10 +39,11 @@ function parseOwner(name){if(!name)return"SHARED";const s=String(name).toUpperCa
   const pm=s.match(/\(([^)]+)\)\s*$/);if(pm){const i=pm[1].trim();if(PP.includes(i))return i;if(i==="SHOP")return"SHARED";if(CSG[i])return CSG[i];}
   for(const k of PP)if(s.includes(k+" ")||s.includes(" "+k)||s.endsWith(k)||s.startsWith(k))return k;
   if(s.includes("(SHOP)"))return"SHARED";return"UNKNOWN";}
-function parseSqOwner(n,dev){const s=String(n||"").toUpperCase();
+function parseSqOwner(n,dev,pplInfo){const s=String(n||"").toUpperCase();
   const pm=s.match(/\(([^)]+)\)/);if(pm)for(const p of PP)if(pm[1].includes(p))return{o:p,c:"hi"};
   for(const k of PP)if(s.includes(k))return{o:k,c:"hi"};
   for(const[a,o]of Object.entries(CSG))if(s.includes(a))return{o,c:"hi"};
+  if(pplInfo)for(const[name,info]of Object.entries(pplInfo)){if(info.consignId&&s.includes(info.consignId.toUpperCase()))return{o:name,c:"hi"};}
   if(dev){const d=String(dev).toUpperCase().trim();if(DM[d])return{o:DM[d],c:"dev"};}
   return{o:"UNKNOWN",c:"no"};}
 function parseShopifyCSV(t){const{data:rows}=Papa.parse(t,{header:true,skipEmptyLines:true});const items=[];const om={};
@@ -60,10 +61,10 @@ function parseShopifyCSV(t){const{data:rows}=Papa.parse(t,{header:true,skipEmpty
     if(o.hasSplitPay)it.fl.push("split_pay");
     if(o.refunded&&!it.fl.includes("refunded"))it.fl.push("refunded");}
   return{items,channel:"shopify"};}
-function parseSquareCSV(t){const{data:rows}=Papa.parse(t,{header:true,skipEmptyLines:true});const items=[];
+function parseSquareCSV(t,pplInfo){const{data:rows}=Papa.parse(t,{header:true,skipEmptyLines:true});const items=[];
   for(const r of rows){const date=r["Date"];if(!date)continue;
     const amt=parseFloat(String(r["Net Sales"]||"0").replace(/[$,]/g,""))||0;if(amt<=0)continue;
-    const n=r["Notes"]||"";const dev=r["Device Name"]||"";const{o:owner,c:conf}=parseSqOwner(n,dev);
+    const n=r["Notes"]||"";const dev=r["Device Name"]||"";const{o:owner,c:conf}=parseSqOwner(n,dev,pplInfo);
     const fl=[];if(owner==="UNKNOWN")fl.push("unknown");else if(conf==="dev")fl.push("device_guess");
     if(!n||n==="nan")fl.push("no_notes");
     items.push({id:items.length,date,name:n||"Custom Amount",amt,owner,fl,device:dev,order:""});}
@@ -325,7 +326,7 @@ export default function App(){
     refundEntries(ids);
   };
   const handleFile=(e,type)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();
-    reader.onload=ev=>{const r=type==="shopify"?parseShopifyCSV(ev.target.result):parseSquareCSV(ev.target.result);sII(r.items);sIC(r.channel);sIF("all");sSEC("manual");};reader.readAsText(file);e.target.value="";};
+    reader.onload=ev=>{const r=type==="shopify"?parseShopifyCSV(ev.target.result):parseSquareCSV(ev.target.result,pplInfo);sII(r.items);sIC(r.channel);sIF("all");sSEC("manual");};reader.readAsText(file);e.target.value="";};
   const editOwner=(id,nw)=>{sII(prev=>prev.map(it=>it.id===id?{...it,owner:nw,fl:it.fl.filter(f=>f!=="unknown")}:it));};
   const editSplit=(id,field,val)=>{sII(prev=>prev.map(it=>it.id===id?{...it,[field]:val}:it));};
   const editSplits=(id,splits)=>{sII(prev=>prev.map(it=>it.id===id?{...it,splits}:it));};
@@ -1050,7 +1051,7 @@ export default function App(){
       {impItems&&<button onClick={()=>sII(null)} style={{padding:"4px 10px",borderRadius:5,border:"1px solid #ef444430",background:"transparent",color:"#ef4444",cursor:"pointer",fontSize:9,fontWeight:600}}>✕ Clear</button>}
     </div>
     {/* === IMPORT PREVIEW === */}
-    {impItems&&impStats?<>
+    {impItems&&impStats&&<>
       <div style={{...cr,padding:"14px 18px",marginBottom:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <span style={{fontSize:13,fontWeight:700}}>{CL[impCh]} — {impStats.count} items</span>
@@ -1141,9 +1142,10 @@ export default function App(){
         <span style={{color:impStats.unk.length?"#ef4444":"#10b981",fontSize:11}}>{impStats.unk.length?`${impStats.unk.length} unknown → skipped`:"✓ All assigned"}</span>
         <button onClick={applyImport} style={{padding:"8px 24px",borderRadius:8,border:"none",background:"#10b981",color:"#fafafa",cursor:"pointer",fontSize:12,fontWeight:700}}>Apply {impStats.count-impStats.unk.length}</button>
       </div>
-    </>
-    /* === MANUAL ORDER FORM === */
-    :<>
+    </>}
+    {/* === MANUAL ORDER FORM === */}
+    {impItems&&<div style={{borderTop:`1px solid ${T.border}`,margin:"16px 0",position:"relative"}}><span style={{position:"absolute",top:-9,left:16,background:T.card,padding:"0 8px",color:"#71717a",fontSize:9,fontWeight:600,letterSpacing:1}}>MANUAL ORDER</span></div>}
+    <>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
       <div><div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:4}}>CHANNEL</div><select value={cartCh} onChange={e=>sCartCh(e.target.value)} style={{...is,width:"100%"}}>{Object.entries(CL).map(([k,v])=>(<option key={k} value={k}>{v}</option>))}</select></div>
       <div><div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:4}}>DATE</div><input type="date" value={cartDt} onChange={e=>sCartDt(e.target.value)} style={{...is,width:"100%",colorScheme:"dark"}}/></div>
@@ -1198,8 +1200,8 @@ export default function App(){
       </div>
       <button onClick={submitCart} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fafafa",cursor:"pointer",fontSize:14,fontWeight:700}}>Submit Order ({cart.length} items · {FF(cart.reduce((s,c)=>s+c.total,0))})</button>
     </>}
-    {cart.length===0&&<div style={{textAlign:"center",padding:"20px",color:"#52525b",fontSize:12}}>Add items above to build an order — each item can be Sale, Consignment, Out, or Transfer</div>}
-    </>}
+    {cart.length===0&&!impItems&&<div style={{textAlign:"center",padding:"20px",color:"#52525b",fontSize:12}}>Add items above to build an order — each item can be Sale, Consignment, Out, or Transfer</div>}
+    </>
   </div>}
   {sec==="money"&&<div style={{...cr,padding:"20px"}}>
     <div style={{display:"flex",gap:4,marginBottom:14}}>{[["BUY","💸 Buy/Pull"],["CONSIGN_PAY","📦 Consigner Payout"],["PAY_LOG","📜 Payout Log"],["XFER","↔ Transfer"]].map(([k,l])=>(<button key={k} onClick={()=>sPOType(k)} style={{padding:"5px 12px",borderRadius:6,border:`1px solid ${poType===k?`${AC}40`:T.border}`,background:poType===k?`${AC}18`:"transparent",color:poType===k?AC:"#52525b",cursor:"pointer",fontSize:10,fontWeight:600}}>{l}</button>))}</div>
@@ -1891,6 +1893,7 @@ export default function App(){
       {k:"email",l:"📧 Email",ph:"e.g. name@email.com"},
       {k:"address",l:"📍 Address",ph:"e.g. 123 Main St, Sacramento"},
       {k:"venmo",l:"💸 Venmo / CashApp",ph:"e.g. @username"},
+      {k:"consignId",l:"🏷 Consignment #",ph:"e.g. 0002"},
       {k:"notes",l:"📝 Notes",ph:"Anything to remember...",multi:true}
     ];
     const updateField=(k,v)=>{const ni={...pplInfo,[p]:{...info,[k]:v}};sPplInfo(ni);svPpl(ni);};
