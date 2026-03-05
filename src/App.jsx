@@ -380,7 +380,7 @@ export default function App(){
       // Determine actual payment channel from payment method
       const pmUp=(it.pm||"").toUpperCase();
       // For non-split: detect channel from payment method
-      const actualCh=ch==="shopify"?(pmUp.includes("CASH")?"cash":pmUp.includes("AMEX")||pmUp.includes("AMERICAN EXPRESS")?"amex":"shopify"):"amex";
+      const actualCh=ch==="cash"?"cash":ch==="amex"?"amex":ch==="shopify"?(pmUp.includes("CASH")?"cash":pmUp.includes("AMEX")||pmUp.includes("AMERICAN EXPRESS")?"amex":"shopify"):"amex";
       // For split payments, detect what each split portion is
       // Parse payment methods to figure out cash vs card vs amex
       const pmParts=pmUp.split("+").map(s=>s.trim());
