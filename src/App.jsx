@@ -345,6 +345,9 @@ export default function App(){
   const editOwner=(id,nw)=>{sII(prev=>prev.map(it=>it.id===id?{...it,owner:nw,fl:it.fl.filter(f=>f!=="unknown")}:it));};
   const editSplit=(id,field,val)=>{sII(prev=>prev.map(it=>it.id===id?{...it,[field]:val}:it));};
   const editSplits=(id,splits)=>{sII(prev=>prev.map(it=>it.id===id?{...it,splits}:it));};
+  const[delConfId,sDelConfId]=useState(null);
+  const removeImpItem=(id)=>{sII(prev=>{const n=prev.filter(it=>it.id!==id);return n.length?n:null;});sDelConfId(null);};
+  const removeImpOrder=(ord)=>{sII(prev=>{const n=prev.filter(it=>it.order!==ord);return n.length?n:null;});sDelConfId(null);};
   const COMM={LJ:{rate:0.10,split:"AJAY"},EVAN:{rate:0.25,split:"BOTH"}};const DEF_COMM={rate:0.15,split:"BOTH"};
   const OWNERS=new Set(["AJAY","DEREK","SHARED"]);
   const SQ_FEE=0.026;
@@ -1106,14 +1109,18 @@ export default function App(){
             const grp=ordGrp[it.order||`_${it.id}`]||[];
             const ordTotal=grp.reduce((s,i)=>s+i.amt,0);const ordShop=grp.reduce((s,i)=>s+(i.shopAmt!=null?i.shopAmt:(i.fl.includes("split_pay")?Math.max(0,i.amt-(i.cashAmt||0)-(i.tradeAmt||0)):i.amt)),0);const ordCash=grp.reduce((s,i)=>s+(i.cashAmt||0),0);const ordTrade=grp.reduce((s,i)=>s+(i.tradeAmt||0),0);const hasSplitInGrp=grp.some(i=>i.fl.includes("split_pay"));
             return(<div key={it.id}>
-              {newOrd&&it.order&&grp.length>1&&<div style={{padding:"6px 14px",background:"rgba(6,182,212,.04)",borderTop:idx>0?"2px solid #52525b":"none",marginTop:idx>0?4:0,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                <span style={{color:"#06b6d4",fontSize:12,fontWeight:800,fontFamily:"monospace"}}>{it.order}</span><span style={{color:"#71717a",fontSize:9}}>{grp.length} items</span><span style={{color:"#fafafa",fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{FX(ordTotal)}</span>
+              {newOrd&&it.order&&<div style={{padding:"6px 14px",background:"rgba(6,182,212,.04)",borderTop:idx>0?"2px solid #52525b":"none",marginTop:idx>0?4:0,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <span style={{color:"#06b6d4",fontSize:12,fontWeight:800,fontFamily:"monospace"}}>{it.order}</span><span style={{color:"#71717a",fontSize:9}}>{grp.length} item{grp.length>1?"s":""}</span><span style={{color:"#fafafa",fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{FX(ordTotal)}</span>
+                {(()=>{const ch=grp[0]?.ch||impCh;const chL=CL[ch]||ch;const chC=CC[ch]||"#71717a";return <span style={{fontSize:8,fontWeight:700,padding:"1px 6px",borderRadius:4,border:`1px solid ${chC}40`,background:`${chC}10`,color:chC}}>→ {chL}</span>;})()}
                 {hasSplitInGrp&&<><span style={{color:"#96bf48",fontSize:9}}>Shop: <b>{FX(ordShop)}</b></span>{ordCash>0&&<span style={{color:AC,fontSize:9}}>Cash: <b>{FX(ordCash)}</b></span>}{ordTrade>0&&<span style={{color:"#a78bfa",fontSize:9}}>Trade: <b>{FX(ordTrade)}</b></span>}</>}
+                {grp.some(i=>i.fl.includes("duplicate"))&&<span style={{color:"#f97316",fontSize:8,fontWeight:700}}>⚠ Already Imported</span>}
+                <button onClick={()=>sDelConfId(sDelConfId===it.order?null:it.order)} style={{marginLeft:"auto",padding:"1px 6px",borderRadius:4,border:"1px solid #ef444430",background:delConfId===it.order?"rgba(239,68,68,.15)":"transparent",color:"#ef4444",cursor:"pointer",fontSize:9,fontWeight:600}}>×</button>
+                {delConfId===it.order&&<button onClick={()=>removeImpOrder(it.order)} style={{padding:"2px 8px",borderRadius:4,border:"none",background:"#ef4444",color:"#fff",cursor:"pointer",fontSize:9,fontWeight:700}}>Delete Order?</button>}
               </div>}
-              {newOrd&&it.order&&grp.length<=1&&<div style={{borderTop:idx>0?"2px solid #52525b":"none",marginTop:idx>0?4:0}}/>}
+              {newOrd&&!it.order&&idx>0&&<div style={{borderTop:"2px solid #52525b",marginTop:4}}/>}
               <div style={{padding:"8px 14px",borderBottom:"1px solid rgba(63,63,70,.3)",background:isU?"rgba(239,68,68,.03)":isSplit?"rgba(249,115,22,.04)":it.fl.length?"rgba(245,158,11,.02)":"transparent"}}>
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:isSplit?6:0}}>
-            {it.order&&<span style={{color:"#06b6d4",fontSize:11,fontWeight:800,fontFamily:"monospace",minWidth:48}}>{it.order}</span>}
+            {!it.order&&(()=>{const ch=it.ch||impCh;const chC=CC[ch]||"#71717a";return <span style={{fontSize:7,fontWeight:700,padding:"1px 5px",borderRadius:3,border:`1px solid ${chC}40`,background:`${chC}10`,color:chC}}>→ {CL[ch]||ch}</span>;})()}
             {it.fl.includes("tax")?<span style={{color:"#71717a",fontSize:10,fontWeight:600,padding:"3px 6px"}}>🧾 Tax</span>:!(it.splits&&it.splits.length>0)&&<select value={it.owner} onChange={e=>editOwner(it.id,e.target.value)} style={{background:isU?"rgba(239,68,68,.15)":"rgba(63,63,70,.6)",border:`1px solid ${isU?"#ef444440":"#3f3f46"}`,borderRadius:6,padding:"3px 6px",color:isU?"#ef4444":CO[it.owner]||"#ccc",fontSize:10,fontWeight:600,cursor:"pointer",outline:"none",minWidth:75}}>
               {isU&&<option value="UNKNOWN">⚠ ???</option>}<optgroup label="MAIN" style={{background:"#27272a"}}>{["AJAY","DEREK","SHARED","LJ"].map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup><optgroup label="CONSIGNERS" style={{background:"#27272a"}}>{PP.filter(p=>!["AJAY","DEREK","SHARED","LJ"].includes(p)).sort().map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup></select>}
             {impCh==="square"?<input type="number" value={it.amt} onChange={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v>=0){editSplit(it.id,"amt",v);if(it.personAmt!=null&&it.personAmt>v)editSplit(it.id,"personAmt",v);}}} style={{...is,width:62,padding:"2px 6px",fontSize:12,fontWeight:700,color:"#22c55e",fontFamily:"monospace",borderRadius:5,textAlign:"right"}}/>:<span style={{color:"#22c55e",fontFamily:"monospace",fontSize:12,fontWeight:700,minWidth:50}}>{FX(it.amt)}</span>}
@@ -1126,6 +1133,7 @@ export default function App(){
             <div style={{minWidth:0,flexShrink:0}}><div style={{color:"#d4d4d8",fontSize:10,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120}}>{it.name}</div><div style={{color:"#a1a1aa",fontSize:9}}>{SD(it.date)}{it.pm&&` · ${it.pm}`}</div></div>
             {it.fl.map(f=>(<span key={f} style={{padding:"1px 6px",borderRadius:8,fontSize:8,fontWeight:600,background:`${FC[f]}15`,color:FC[f],border:`1px solid ${FC[f]}30`}}>{FL[f]}</span>))}
             {impCh==="square"&&<button onClick={()=>editSplits(it.id,it.splits&&it.splits.length>0?[]:[{owner:isU?"UNKNOWN":it.owner,amt:it.personAmt!=null?it.personAmt:it.amt}])} style={{padding:"2px 8px",borderRadius:4,border:`1px solid ${it.splits&&it.splits.length>0?"#a78bfa50":"#3f3f4660"}`,background:it.splits&&it.splits.length>0?"rgba(167,139,250,.18)":"transparent",color:it.splits&&it.splits.length>0?"#a78bfa":"#52525b",cursor:"pointer",fontSize:8,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>± Split</button>}
+            {delConfId===it.id?<button onClick={()=>removeImpItem(it.id)} style={{padding:"2px 8px",borderRadius:4,border:"none",background:"#ef4444",color:"#fff",cursor:"pointer",fontSize:8,fontWeight:700,flexShrink:0}}>Delete?</button>:<button onClick={()=>sDelConfId(it.id)} style={{padding:"1px 5px",borderRadius:4,border:"1px solid #ef444430",background:"transparent",color:"#52525b",cursor:"pointer",fontSize:10,lineHeight:1,flexShrink:0}}>×</button>}
           </div>
           {it.splits&&it.splits.length>0&&(()=>{const sTotal=Math.round(it.splits.reduce((s,sp)=>s+(sp.amt||0),0)*100)/100;const taxRem=Math.round(Math.max(0,it.amt-sTotal)*100)/100;const isOver=sTotal>it.amt+0.01;return(
           <div style={{marginLeft:48,paddingTop:5,paddingBottom:2,display:"flex",flexDirection:"column",gap:4}}>
