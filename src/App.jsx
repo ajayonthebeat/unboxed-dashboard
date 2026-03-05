@@ -69,9 +69,9 @@ function parseSquareCSV(t,pplInfo){const{data:rows}=Papa.parse(t,{header:true,sk
     if(!n||n==="nan")fl.push("no_notes");
     items.push({id:items.length,date,name:n||"Custom Amount",amt,owner,fl,device:dev,order:""});}
   return{items,channel:"square"};}
-function parseDiscord(text){const blocks=text.split(/(?=🛒|(?:^|\n)(?:In-Store Sale|Private Sale))/i);const allItems=[];let mainCh="cash";const date=new Date().toISOString().slice(0,10);
+function parseDiscord(text){const blocks=text.split(/(?=🛒|🤝)/);const allItems=[];let mainCh="cash";const date=new Date().toISOString().slice(0,10);
   for(const block of blocks){if(!block.trim())continue;const lines=block.split('\n').map(l=>l.trim());let channel="cash";let txnId="";
-    const txIdM=block.match(/Transaction:\s*(POS-[A-Z0-9]+)/i);if(txIdM)txnId=txIdM[1];
+    const txIdM=block.match(/Transaction:\s*((?:POS|PVT)-[A-Z0-9]+)/i);if(txIdM)txnId=txIdM[1];
     for(let i=0;i<lines.length;i++){const l=lines[i];
       if(/^payment$/i.test(l)&&lines[i+1]){const pm=lines[i+1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
       const pmM=l.match(/^payment[:\s]+(.+)/i);if(pmM){const pm=pmM[1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
