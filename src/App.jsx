@@ -69,6 +69,16 @@ function parseSquareCSV(t,pplInfo){const{data:rows}=Papa.parse(t,{header:true,sk
     if(!n||n==="nan")fl.push("no_notes");
     items.push({id:items.length,date,name:n||"Custom Amount",amt,owner,fl,device:dev,order:""});}
   return{items,channel:"square"};}
+function parseDiscord(text){const lines=text.split('\n').map(l=>l.trim());const items=[];let channel="cash";const date=new Date().toISOString().slice(0,10);
+  for(let i=0;i<lines.length;i++){const l=lines[i];
+    if(/^payment$/i.test(l)&&lines[i+1]){const pm=lines[i+1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
+    const pmM=l.match(/^payment[:\s]+(.+)/i);if(pmM){const pm=pmM[1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
+    const im=l.match(/^[•·\-]\s*(.+?)\s*—\s*\$([0-9,.]+)\s*\((\w+)\)\s*$/);
+    if(im){const name=im[1].trim().substring(0,80);const amt=parseFloat(im[2].replace(/,/g,""))||0;const ow=im[3].toUpperCase();const owner=PP.includes(ow)?ow:"UNKNOWN";
+      if(amt>0)items.push({id:items.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:"",device:""});}}
+  const txM=text.match(/\+\s*\$([0-9,.]+)\s*tax/i);
+  if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)items.push({id:items.length,date,name:"Tax",amt:tax,owner:"SHARED",fl:[],order:"",device:""});}
+  return{items,channel};}
 const TT=({active,payload,label})=>{if(!active||!payload)return null;const it=payload.filter(p=>p.value>0&&p.dataKey!=="_t"&&p.dataKey!=="_total").sort((a,b)=>b.value-a.value);const tot=it.reduce((s,p)=>s+p.value,0);
   return(<div style={{background:"#27272a",border:"1px solid #3f3f46",borderRadius:10,padding:"12px 16px",boxShadow:"0 8px 32px rgba(0,0,0,.5)",minWidth:150}}>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,gap:16}}><span style={{color:"#fafafa",fontWeight:700,fontSize:12}}>{label}</span><span style={{color:AC,fontWeight:700,fontSize:11,fontFamily:"monospace"}}>{FF(tot)}</span></div>
@@ -148,7 +158,7 @@ export default function App(){
     </div>
   </div>);
   const[ct,sCT]=useState("area");const[tab,sTB]=useState("home");const[cv,sCV]=useState("stacked");const[bv,sBV]=useState("grouped");const[showTot,sSTot]=useState(false);const[visCh,sVisCh]=useState(["shopify","square","cash","amex"]);const[stgExp,sStgExp]=useState(new Set());
-  const[toast,sT]=useState(null);const[impItems,sII]=useState(null);const[impCh,sIC]=useState("");const[impFilter,sIF]=useState("all");
+  const[toast,sT]=useState(null);const[impItems,sII]=useState(null);const[impCh,sIC]=useState("");const[impFilter,sIF]=useState("all");const[discMode,sDiscMode]=useState(false);
   const[stfP,sSTP]=useState(null);const[gV,sGV]=useState("cum");const[sec,sSEC]=useState("daily");
   const[gPP,sGPP]=useState(["AJAY","DEREK","SHARED","LJ"]);const[sdf,sSDF]=useState("2026-01-01");const[sdt,sSDT]=useState(TODAY);const[goalP,sGoalP]=useState("AJAY");
   const[cart,sCart]=useState([]);const[ciP,sCIP]=useState("AJAY");const[ciN,sCIN]=useState("");const[ciQ,sCIQ]=useState("1");const[ciA,sCIA]=useState("");const[ciIO,sCIIO]=useState("IN");const[cartCh,sCartCh]=useState("cash");const[cartDt,sCartDt]=useState(TODAY);const[bkSort,sBkSort]=useState({col:"date",dir:"desc"});const[itemCat,sItemCat]=useState("");const[sealGame,sSealGame]=useState("");const[sealSeries,sSealSeries]=useState("");const[sealSub,sSealSub]=useState("");const[sealType,sSealType]=useState("");const[cartImg,sCartImg]=useState(null);const[viewImg,sViewImg]=useState(null);
@@ -1048,8 +1058,14 @@ export default function App(){
       {[["shopify","🛒 Shopify"],["square","⬛ Square"]].map(([type,label])=>(
         <label key={type} style={{padding:"5px 12px",borderRadius:6,border:`1px solid ${CC[type]}40`,background:`${CC[type]}10`,color:CC[type],fontSize:10,fontWeight:600,cursor:"pointer",position:"relative",overflow:"hidden"}}>{label}<input type="file" accept=".csv" onChange={e=>{try{handleFile(e,type)}catch(err){tw("⚠ Error reading file")}}} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",opacity:0,cursor:"pointer"}}/></label>
       ))}
+      <button onClick={()=>sDiscMode(v=>!v)} style={{padding:"5px 12px",borderRadius:6,border:`1px solid ${discMode?"#7c3aed40":"#3f3f46"}`,background:discMode?"rgba(124,58,237,.1)":"transparent",color:discMode?"#7c3aed":"#71717a",fontSize:10,fontWeight:600,cursor:"pointer"}}>📋 Discord</button>
       {impItems&&<button onClick={()=>sII(null)} style={{padding:"4px 10px",borderRadius:5,border:"1px solid #ef444430",background:"transparent",color:"#ef4444",cursor:"pointer",fontSize:9,fontWeight:600}}>✕ Clear</button>}
     </div>
+    {discMode&&<div style={{...cr,padding:"12px",marginBottom:10}}>
+      <div style={{color:"#7c3aed",fontSize:10,fontWeight:600,marginBottom:6}}>📋 Paste Discord Order</div>
+      <textarea id="disc-paste" placeholder="Paste Discord order message here..." style={{...is,width:"100%",minHeight:100,resize:"vertical",fontFamily:"monospace",fontSize:10,marginBottom:8}}/>
+      <button onClick={()=>{const txt=document.getElementById("disc-paste").value;if(!txt.trim()){tw("⚠ Paste an order first");return;}const r=parseDiscord(txt);if(r.items.length===0){tw("⚠ No items found");return;}sII(r.items);sIC(r.channel);sIF("all");sDiscMode(false);tw(`✓ Parsed ${r.items.length} items from Discord`);}} style={{padding:"6px 16px",borderRadius:6,border:"none",background:"#7c3aed",color:"#fafafa",cursor:"pointer",fontSize:11,fontWeight:700}}>Import</button>
+    </div>}
     {/* === IMPORT PREVIEW === */}
     {impItems&&impStats&&<>
       <div style={{...cr,padding:"14px 18px",marginBottom:10}}>
