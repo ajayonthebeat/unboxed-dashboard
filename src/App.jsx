@@ -359,14 +359,15 @@ export default function App(){
       if(it.fl.includes("duplicate"))continue;
       if(it.splits&&it.splits.length>0){
         const label=(it.order?`${it.order} · ${it.name||impCh}`:`${impCh} import`)+(it.note?` — ${it.note}`:"");
+        const sCh=it.ch||(impCh==="square"?"amex":impCh);
         for(const splt of it.splits){if(!splt.owner||splt.owner==="UNKNOWN"||!(splt.amt>0))continue;
           const isOwner=OWNERS.has(splt.owner);const fee=Math.round(splt.amt*SQ_FEE*100)/100;const net=Math.round((splt.amt-fee)*100)/100;
-          if(isOwner){ne.push({id:ts(),c:"amex",d:it.date,p:splt.owner,a:net,io:"IN",r:`${label} (split, net after ${(SQ_FEE*100).toFixed(1)}% fee)`,ord:it.order||"",t:new Date().toISOString()});}
+          if(isOwner){ne.push({id:ts(),c:sCh,d:it.date,p:splt.owner,a:net,io:"IN",r:`${label} (split, net after ${(SQ_FEE*100).toFixed(1)}% fee)`,ord:it.order||"",t:new Date().toISOString()});}
           else{const cfg=COMM[splt.owner]||DEF_COMM;const commAmt=Math.round(splt.amt*cfg.rate*100)/100;const consignerAmt=Math.round((splt.amt-commAmt)*100)/100;const netComm=Math.round((commAmt-fee)*100)/100;
-            ne.push({id:ts(),c:"amex",d:it.date,p:splt.owner,a:consignerAmt,io:"IN",r:`${label} (split, ${((1-cfg.rate)*100).toFixed(0)}% consigner)`,ord:it.order||"",t:new Date().toISOString()});
-            if(cfg.split==="AJAY")ne.push({id:ts(),c:"amex",d:it.date,p:"AJAY",a:Math.max(0,netComm),io:"IN",r:`${label} (split comm ${splt.owner})`,ord:it.order||"",t:new Date().toISOString()});
-            else if(cfg.split==="DEREK")ne.push({id:ts(),c:"amex",d:it.date,p:"DEREK",a:Math.max(0,netComm),io:"IN",r:`${label} (split comm ${splt.owner})`,ord:it.order||"",t:new Date().toISOString()});
-            else{const half=Math.round(Math.max(0,netComm)/2*100)/100;ne.push({id:ts(),c:"amex",d:it.date,p:"AJAY",a:half,io:"IN",r:`${label} (split comm ${splt.owner})`,ord:it.order||"",t:new Date().toISOString()});ne.push({id:ts(),c:"amex",d:it.date,p:"DEREK",a:half,io:"IN",r:`${label} (split comm ${splt.owner})`,ord:it.order||"",t:new Date().toISOString()});}
+            ne.push({id:ts(),c:sCh,d:it.date,p:splt.owner,a:consignerAmt,io:"IN",r:`${label} (split, ${((1-cfg.rate)*100).toFixed(0)}% consigner)`,ord:it.order||"",t:new Date().toISOString()});
+            if(cfg.split==="AJAY")ne.push({id:ts(),c:sCh,d:it.date,p:"AJAY",a:Math.max(0,netComm),io:"IN",r:`${label} (split comm ${splt.owner})`,ord:it.order||"",t:new Date().toISOString()});
+            else if(cfg.split==="DEREK")ne.push({id:ts(),c:sCh,d:it.date,p:"DEREK",a:Math.max(0,netComm),io:"IN",r:`${label} (split comm ${splt.owner})`,ord:it.order||"",t:new Date().toISOString()});
+            else{const half=Math.round(Math.max(0,netComm)/2*100)/100;ne.push({id:ts(),c:sCh,d:it.date,p:"AJAY",a:half,io:"IN",r:`${label} (split comm ${splt.owner})`,ord:it.order||"",t:new Date().toISOString()});ne.push({id:ts(),c:sCh,d:it.date,p:"DEREK",a:half,io:"IN",r:`${label} (split comm ${splt.owner})`,ord:it.order||"",t:new Date().toISOString()});}
           }}continue;}
 
       const isSpl=it.fl.includes("split_pay");
@@ -448,8 +449,8 @@ export default function App(){
       }
     }
     if(impCh==="square"){for(let i=entries.length;i<ne.length;i++){ne[i]={...ne[i],src:"square"};}}
-    sE(ne);sv(ne);const nd={...dd},nc={...cd};
-    for(const e of ne.slice(entries.length)){if(e.io==="IN"||e.io==="CONSIGNMENT"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}}
+    sE(ne);sv(ne);
+    const nd={...S_ALL},nc={...S_C_NET};ne.forEach(e=>{if(e.io==="IN"||e.io==="CONSIGNMENT"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}});
     sDD({...nd});sCD({...nc});const remaining=impItems.filter(it=>it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0)&&!it.fl.includes("refunded"));
     tw(`✓ Imported ${ne.length-entries.length} entries${refCnt>0?` (${refCnt} refunded skipped)`:""}${remaining.length?` · ${remaining.length} still unassigned`:""}`);sII(remaining.length>0?remaining:null);};
 
