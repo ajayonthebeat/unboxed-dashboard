@@ -77,17 +77,17 @@ function parseDiscord(text){const blocks=text.split(/(?=🛒)/);const allItems=[
       const pmM=l.match(/^payment[:\s]+(.+)/i);if(pmM){const pm=pmM[1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
       const im=l.match(/^[•·\-]\s*(.+?)\s*(?:—|=)\s*\$([0-9,.]+)\s*\((\w+)\)\s*$/);
       if(im){const name=im[1].split('—')[0].trim().substring(0,80);const amt=parseFloat(im[2].replace(/,/g,""))||0;const ow=im[3].toUpperCase();const owner=PP.includes(ow)?ow:"UNKNOWN";
-        if(amt>0)allItems.push({id:allItems.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:txnId,device:""});}}
+        if(amt>0)allItems.push({id:allItems.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:txnId,device:"",ch:channel});}}
     const txM=block.match(/\+\s*\$([0-9,.]+)\s*tax/i);
-    if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)allItems.push({id:allItems.length,date,name:"Tax",amt:tax,owner:"SHARED",fl:["tax"],order:txnId,device:""});}
+    if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)allItems.push({id:allItems.length,date,name:"Tax",amt:tax,owner:"SHARED",fl:["tax"],order:txnId,device:"",ch:channel});}
     if(allItems.length>0)mainCh=channel;}
   return{items:allItems,channel:mainCh};}
 const TT=({active,payload,label})=>{if(!active||!payload)return null;const it=payload.filter(p=>p.value>0&&p.dataKey!=="_t"&&p.dataKey!=="_total").sort((a,b)=>b.value-a.value);const tot=it.reduce((s,p)=>s+p.value,0);
   return(<div style={{background:"#27272a",border:"1px solid #3f3f46",borderRadius:10,padding:"12px 16px",boxShadow:"0 8px 32px rgba(0,0,0,.5)",minWidth:150}}>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,gap:16}}><span style={{color:"#fafafa",fontWeight:700,fontSize:12}}>{label}</span><span style={{color:AC,fontWeight:700,fontSize:11,fontFamily:"monospace"}}>{FF(tot)}</span></div>
     {it.map((p,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",gap:16,padding:"1px 0"}}><div style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:6,height:6,borderRadius:"50%",background:p.stroke||p.fill}}/><span style={{color:"#d4d4d8",fontSize:10}}>{p.dataKey}</span></div><span style={{color:"#ddd",fontFamily:"monospace",fontSize:10}}>{FF(p.value)}</span></div>))}</div>);};
-const FC={"unknown":"#ef4444","trade_credit":"#a78bfa","cash_order":"#f59e0b","device_guess":"#06b6d4","no_notes":"#666","split_order":"#ec4899","multi_item":"#818cf8","split_pay":"#f97316","refunded":"#dc2626","tax":"#71717a"};
-const FL={"unknown":"⚠ Unknown","trade_credit":"💳 Trade/Credit","cash_order":"💵 Cash Only","device_guess":"📱 Device","no_notes":"📝 No Notes","split_order":"👥 Split Owner","multi_item":"📦 Multi-Item","split_pay":"💰 Split Pay","refunded":"🔴 Refunded","tax":"🧾 Tax"};
+const FC={"unknown":"#ef4444","trade_credit":"#a78bfa","cash_order":"#f59e0b","device_guess":"#06b6d4","no_notes":"#666","split_order":"#ec4899","multi_item":"#818cf8","split_pay":"#f97316","refunded":"#dc2626","tax":"#71717a","duplicate":"#f97316"};
+const FL={"unknown":"⚠ Unknown","trade_credit":"💳 Trade/Credit","cash_order":"💵 Cash Only","device_guess":"📱 Device","no_notes":"📝 No Notes","split_order":"👥 Split Owner","multi_item":"📦 Multi-Item","split_pay":"💰 Split Pay","refunded":"🔴 Refunded","tax":"🧾 Tax","duplicate":"⚠ Already Imported"};
 
 export default function App(){
   const SHOP_FEE=0.03;const SHOP_FEE_START="2026-02-14";
@@ -338,8 +338,10 @@ export default function App(){
     if(ids.length===0){tw("No entries found for that order");return;}
     refundEntries(ids);
   };
+  const flagDupes=(items)=>{const existOrd=new Set(entries.filter(e=>e.ord).map(e=>e.ord));
+    return items.map(it=>it.order&&existOrd.has(it.order)?{...it,fl:[...it.fl,"duplicate"]}:it);};
   const handleFile=(e,type)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();
-    reader.onload=ev=>{const r=type==="shopify"?parseShopifyCSV(ev.target.result):parseSquareCSV(ev.target.result,pplInfo);sII(r.items);sIC(r.channel);sIF("all");sSEC("manual");};reader.readAsText(file);e.target.value="";};
+    reader.onload=ev=>{const r=type==="shopify"?parseShopifyCSV(ev.target.result):parseSquareCSV(ev.target.result,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");sSEC("manual");};reader.readAsText(file);e.target.value="";};
   const editOwner=(id,nw)=>{sII(prev=>prev.map(it=>it.id===id?{...it,owner:nw,fl:it.fl.filter(f=>f!=="unknown")}:it));};
   const editSplit=(id,field,val)=>{sII(prev=>prev.map(it=>it.id===id?{...it,[field]:val}:it));};
   const editSplits=(id,splits)=>{sII(prev=>prev.map(it=>it.id===id?{...it,splits}:it));};
@@ -351,6 +353,7 @@ export default function App(){
     for(const it of impItems){if(it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0))continue;
       if(it.fl.includes("refunded")){refCnt++;continue;}
       if(it.fl.includes("tax"))continue;
+      if(it.fl.includes("duplicate"))continue;
       if(it.splits&&it.splits.length>0){
         const label=(it.order?`${it.order} · ${it.name||impCh}`:`${impCh} import`)+(it.note?` — ${it.note}`:"");
         for(const splt of it.splits){if(!splt.owner||splt.owner==="UNKNOWN"||!(splt.amt>0))continue;
@@ -369,7 +372,7 @@ export default function App(){
       const tradeA=isSpl?(it.tradeAmt||0):0;
       const label=(it.order?`${it.order} · ${it.name||impCh}`:`${impCh} import`)+(it.note?` — ${it.note}`:"");
       const isOwner=OWNERS.has(it.owner);
-      const ch=impCh;// "shopify" or "square"
+      const ch=it.ch||impCh;// per-item channel or global
       const procFee=ch==="shopify"?SHOP_FEE:ch==="square"?SQ_FEE:0;
       // Determine actual payment channel from payment method
       const pmUp=(it.pm||"").toUpperCase();
@@ -1056,7 +1059,7 @@ export default function App(){
     <div
       onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=AC;e.currentTarget.style.background=`${AC}0d`;}}
       onDragLeave={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";}}
-      onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";const f=e.dataTransfer.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const txt=ev.target.result;const type=txt.includes("Lineitem name")||txt.includes("Financial Status")?"shopify":"square";const r=type==="shopify"?parseShopifyCSV(txt):parseSquareCSV(txt);sII(r.items);sIC(r.channel);sIF("all");tw(`✓ Detected ${type==="shopify"?"Shopify":"Square"} CSV`);}catch(err){tw("⚠ Error reading file")}};reader.readAsText(f);}}
+      onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";const f=e.dataTransfer.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const txt=ev.target.result;const type=txt.includes("Lineitem name")||txt.includes("Financial Status")?"shopify":"square";const r=type==="shopify"?parseShopifyCSV(txt):parseSquareCSV(txt,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");tw(`✓ Detected ${type==="shopify"?"Shopify":"Square"} CSV`);}catch(err){tw("⚠ Error reading file")}};reader.readAsText(f);}}
       style={{display:"flex",gap:6,marginBottom:14,alignItems:"center",flexWrap:"wrap",padding:"8px 12px",borderRadius:8,border:"1px dashed #3f3f46",transition:"all .2s"}}>
       <span style={{color:"#71717a",fontSize:9,fontWeight:600}}>📁 Drop CSV or:</span>
       {[["shopify","🛒 Shopify"],["square","⬛ Square"]].map(([type,label])=>(
@@ -1068,7 +1071,7 @@ export default function App(){
     {discMode&&<div style={{...cr,padding:"12px",marginBottom:10}}>
       <div style={{color:"#7c3aed",fontSize:10,fontWeight:600,marginBottom:6}}>📋 Paste Discord Order</div>
       <textarea id="disc-paste" placeholder="Paste Discord order message here..." style={{...is,width:"100%",minHeight:100,resize:"vertical",fontFamily:"monospace",fontSize:10,marginBottom:8}}/>
-      <button onClick={()=>{const txt=document.getElementById("disc-paste").value;if(!txt.trim()){tw("⚠ Paste an order first");return;}const r=parseDiscord(txt);if(r.items.length===0){tw("⚠ No items found");return;}sII(r.items);sIC(r.channel);sIF("all");sDiscMode(false);tw(`✓ Parsed ${r.items.length} items from Discord`);}} style={{padding:"6px 16px",borderRadius:6,border:"none",background:"#7c3aed",color:"#fafafa",cursor:"pointer",fontSize:11,fontWeight:700}}>Import</button>
+      <button onClick={()=>{const txt=document.getElementById("disc-paste").value;if(!txt.trim()){tw("⚠ Paste an order first");return;}const r=parseDiscord(txt);if(r.items.length===0){tw("⚠ No items found");return;}const flagged=flagDupes(r.items);const dupeCount=flagged.filter(i=>i.fl.includes("duplicate")).length;sII(flagged);sIC(r.channel);sIF("all");sDiscMode(false);tw(dupeCount?`✓ Parsed ${r.items.length} items (⚠ ${dupeCount} already imported)`:`✓ Parsed ${r.items.length} items from Discord`);}} style={{padding:"6px 16px",borderRadius:6,border:"none",background:"#7c3aed",color:"#fafafa",cursor:"pointer",fontSize:11,fontWeight:700}}>Import</button>
     </div>}
     {/* === IMPORT PREVIEW === */}
     {impItems&&impStats&&<>
