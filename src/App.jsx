@@ -77,14 +77,14 @@ function parseDiscord(text){const lines=text.split('\n').map(l=>l.trim());const 
     if(im){const name=im[1].trim().substring(0,80);const amt=parseFloat(im[2].replace(/,/g,""))||0;const ow=im[3].toUpperCase();const owner=PP.includes(ow)?ow:"UNKNOWN";
       if(amt>0)items.push({id:items.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:"",device:""});}}
   const txM=text.match(/\+\s*\$([0-9,.]+)\s*tax/i);
-  if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)items.push({id:items.length,date,name:"Tax",amt:tax,owner:"SHARED",fl:[],order:"",device:""});}
+  if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)items.push({id:items.length,date,name:"Tax",amt:tax,owner:"SHARED",fl:["tax"],order:"",device:""});}
   return{items,channel};}
 const TT=({active,payload,label})=>{if(!active||!payload)return null;const it=payload.filter(p=>p.value>0&&p.dataKey!=="_t"&&p.dataKey!=="_total").sort((a,b)=>b.value-a.value);const tot=it.reduce((s,p)=>s+p.value,0);
   return(<div style={{background:"#27272a",border:"1px solid #3f3f46",borderRadius:10,padding:"12px 16px",boxShadow:"0 8px 32px rgba(0,0,0,.5)",minWidth:150}}>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:6,gap:16}}><span style={{color:"#fafafa",fontWeight:700,fontSize:12}}>{label}</span><span style={{color:AC,fontWeight:700,fontSize:11,fontFamily:"monospace"}}>{FF(tot)}</span></div>
     {it.map((p,i)=>(<div key={i} style={{display:"flex",justifyContent:"space-between",gap:16,padding:"1px 0"}}><div style={{display:"flex",alignItems:"center",gap:5}}><div style={{width:6,height:6,borderRadius:"50%",background:p.stroke||p.fill}}/><span style={{color:"#d4d4d8",fontSize:10}}>{p.dataKey}</span></div><span style={{color:"#ddd",fontFamily:"monospace",fontSize:10}}>{FF(p.value)}</span></div>))}</div>);};
-const FC={"unknown":"#ef4444","trade_credit":"#a78bfa","cash_order":"#f59e0b","device_guess":"#06b6d4","no_notes":"#666","split_order":"#ec4899","multi_item":"#818cf8","split_pay":"#f97316","refunded":"#dc2626"};
-const FL={"unknown":"⚠ Unknown","trade_credit":"💳 Trade/Credit","cash_order":"💵 Cash Only","device_guess":"📱 Device","no_notes":"📝 No Notes","split_order":"👥 Split Owner","multi_item":"📦 Multi-Item","split_pay":"💰 Split Pay","refunded":"🔴 Refunded"};
+const FC={"unknown":"#ef4444","trade_credit":"#a78bfa","cash_order":"#f59e0b","device_guess":"#06b6d4","no_notes":"#666","split_order":"#ec4899","multi_item":"#818cf8","split_pay":"#f97316","refunded":"#dc2626","tax":"#71717a"};
+const FL={"unknown":"⚠ Unknown","trade_credit":"💳 Trade/Credit","cash_order":"💵 Cash Only","device_guess":"📱 Device","no_notes":"📝 No Notes","split_order":"👥 Split Owner","multi_item":"📦 Multi-Item","split_pay":"💰 Split Pay","refunded":"🔴 Refunded","tax":"🧾 Tax"};
 
 export default function App(){
   const SHOP_FEE=0.03;const SHOP_FEE_START="2026-02-14";
@@ -347,6 +347,7 @@ export default function App(){
     const ts=()=>Date.now()+cnt++;
     for(const it of impItems){if(it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0))continue;
       if(it.fl.includes("refunded")){refCnt++;continue;}
+      if(it.fl.includes("tax"))continue;
       if(it.splits&&it.splits.length>0){
         const label=(it.order?`${it.order} · ${it.name||impCh}`:`${impCh} import`)+(it.note?` — ${it.note}`:"");
         for(const splt of it.splits){if(!splt.owner||splt.owner==="UNKNOWN"||!(splt.amt>0))continue;
