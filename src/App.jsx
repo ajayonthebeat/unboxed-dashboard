@@ -2227,13 +2227,81 @@ export default function App(){
         const expLog=()=>{const rows=[["Date","Person","Channel","Source","Type","Amount","Description","Order","Group","Timestamp"].join(",")];
           [...entries].sort((a,b)=>b.d.localeCompare(a.d)||b.t.localeCompare(a.t)).forEach(e=>{rows.push([e.d,e.p,e.c,e.src||"",e.io,e.a.toFixed(2),esc(e.r),esc(e.ord||""),esc(e.grp||""),e.t].join(","));});dl("log",rows.join("\n"));};
         const expAll=()=>{expTxns();expBal();expBank();expLog();};
+        const expAI=()=>{
+          // Build comprehensive export for another AI/app to understand
+          const commRates={};PP.forEach(p=>{if(OWNERS.has(p))commRates[p]={type:"owner",rate:0,note:"Gets full amount (minus processing fees)"};
+            else{const cfg=COMM[p]||DEF_COMM;commRates[p]={type:"consigner",rate:cfg.rate,split:cfg.split,note:`${(cfg.rate*100).toFixed(0)}% commission to ${cfg.split==="BOTH"?"AJAY+DEREK split":cfg.split}`};}});
+          // Revenue by person (all-time)
+          const revByPerson={};PP.forEach(p=>{let t=0;Object.values(dd).forEach(day=>{t+=day[p]||0;});if(t>0)revByPerson[p]=Math.round(t*100)/100;});
+          // Revenue by person by month
+          const revByMonth={};Object.keys(dd).sort().forEach(d=>{const mo=d.slice(0,7);if(!revByMonth[mo])revByMonth[mo]={};PP.forEach(p=>{if(dd[d]?.[p])revByMonth[mo][p]=(revByMonth[mo][p]||0)+dd[d][p];});});
+          Object.keys(revByMonth).forEach(mo=>{Object.keys(revByMonth[mo]).forEach(p=>{revByMonth[mo][p]=Math.round(revByMonth[mo][p]*100)/100;});});
+          // Spending by person (all-time)
+          const spendByPerson={};entries.filter(e=>e.io==="OUT").forEach(e=>{spendByPerson[e.p]=(spendByPerson[e.p]||0)+e.a;});
+          Object.keys(spendByPerson).forEach(p=>{spendByPerson[p]=Math.round(spendByPerson[p]*100)/100;});
+          // Channel revenue totals
+          const revByChannel={};Object.values(cd).forEach(day=>{Object.entries(day).forEach(([c,a])=>{revByChannel[c]=(revByChannel[c]||0)+a;});});
+          Object.keys(revByChannel).forEach(c=>{revByChannel[c]=Math.round(revByChannel[c]*100)/100;});
+          const data={
+            _README:"Unboxed TCG Dashboard — Full Data Export. This file contains all transaction data, balances, analytics, and configuration for the business.",
+            exportedAt:new Date().toISOString(),
+            exportDate:new Date().toISOString().slice(0,10),
+            business:{
+              name:"Unboxed TCG",
+              description:"Trading card game store with multiple owners and consigners",
+              owners:["AJAY","DEREK","SHARED"],
+              ownersNote:"AJAY and DEREK are co-owners. SHARED is the joint business account.",
+              allPeople:PP,
+              commissionRates:commRates,
+              commissionNote:"Consigners sell items through the store. The store keeps a commission and the consigner gets the rest. Commission is split between owners based on the 'split' field."
+            },
+            balances:{
+              _note:"Current account balances per person. Cash = physical cash. Amex = card/digital. Overall = cash + amex.",
+              byPerson:Object.fromEntries(Object.entries(balances).filter(([,b])=>b.cash||b.amex||b.overall).sort(([,a],[,b])=>b.overall-a.overall).map(([p,b])=>[p,{cash:Math.round(b.cash*100)/100,amex:Math.round(b.amex*100)/100,overall:Math.round(b.overall*100)/100}]))
+            },
+            analytics:{
+              _note:"Revenue and spending summaries computed from all transactions.",
+              revenueByPerson:revByPerson,
+              revenueByPersonByMonth:revByMonth,
+              revenueByChannel:revByChannel,
+              spendingByPerson:spendByPerson,
+              totalRevenue:Math.round(Object.values(revByPerson).reduce((s,v)=>s+v,0)*100)/100,
+              totalSpending:Math.round(Object.values(spendByPerson).reduce((s,v)=>s+v,0)*100)/100
+            },
+            transactions:{
+              _note:"All transaction entries. Fields: id (unique), d (date YYYY-MM-DD), p (person), c (channel: cash/amex/shopify/square), a (amount, always positive), io (type: IN=sale, OUT=expense, CONSIGNMENT=consign sale, XFER_IN/XFER_OUT=transfer, REFUND=refund), r (description), ord (order ID), grp (group ID for linked entries), src (import source: discord/square/shopify), t (ISO timestamp)",
+              count:entries.length,
+              entries:entries.map(e=>({id:e.id,date:e.d,person:e.p,channel:e.c,amount:e.a,type:e.io,description:e.r||"",orderRef:e.ord||"",groupId:e.grp||"",source:e.src||"",timestamp:e.t}))
+            },
+            bankTransactions:{
+              _note:"Bank account transactions (deposits, withdrawals). Fields: d (date), acct (account name), type (deposit/withdrawal), amt (amount), note (description)",
+              count:bankTxns.length,
+              entries:bankTxns.map(t=>({date:t.d,account:t.acct,type:t.type,amount:t.amt,note:t.note||"",timestamp:t.t}))
+            },
+            peopleInfo:{
+              _note:"Contact info and metadata for each person. May include phone, email, address, venmo, consignId (consignment number), notes.",
+              data:pplInfo
+            },
+            dailyRevenue:{
+              _note:"Revenue by person for each day. Keys are dates (YYYY-MM-DD), values are objects mapping person names to revenue amounts.",
+              data:dd
+            },
+            channelRevenue:{
+              _note:"Revenue by channel (shopify/square/cash/amex) for each day.",
+              data:cd
+            }
+          };
+          const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`unboxed-full-export-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
+          tw("✓ Full export downloaded");
+        };
         const btnS={padding:"7px 14px",borderRadius:6,border:"1px solid #3f3f46",background:"transparent",color:"#a1a1aa",cursor:"pointer",fontSize:10,fontWeight:600};
         return(<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           <button onClick={expTxns} style={btnS}>Transactions</button>
           <button onClick={expBal} style={btnS}>Account Balances</button>
           <button onClick={expBank} style={btnS}>Bank Transactions</button>
           <button onClick={expLog} style={btnS}>Log (sorted)</button>
-          <button onClick={expAll} style={{...btnS,background:AC,color:"#000",border:"none",fontWeight:700}}>Export All</button>
+          <button onClick={expAll} style={{...btnS,background:AC,color:"#000",border:"none",fontWeight:700}}>Export All CSVs</button>
+          <button onClick={expAI} style={{...btnS,background:"#7c3aed",color:"#fafafa",border:"none",fontWeight:700}}>🤖 Export for AI</button>
         </div>);
       })()}
     </SH>
