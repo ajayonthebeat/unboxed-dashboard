@@ -490,6 +490,19 @@ export default function App(){
   const tp=p=>sSP(v=>v.includes(p)?v.filter(x=>x!==p):[...v,p]);
   const s1=p=>{sSP([p]);sTB("sales");sSEC("daily");};
   const bd=useMemo(()=>{let b={d:"",t:0};fd.forEach(d=>{const t=sp.reduce((s,p)=>s+(dd[d]?.[p]||0),0);if(t>b.t)b={d,t};});return b;},[fd,sp,dd]);
+  // Buying analytics: aggregate OUT entries by date, person, channel
+  const buyAgg=useMemo(()=>{
+    const byDay={},byCh={},byPerson={};let total=0;
+    entries.filter(e=>e.io==="OUT"&&e.d>=df&&e.d<=dt).forEach(e=>{
+      if(!byDay[e.d])byDay[e.d]={};byDay[e.d][e.p]=(byDay[e.d][e.p]||0)+e.a;
+      if(!byCh[e.d])byCh[e.d]={};byCh[e.d][e.c]=(byCh[e.d][e.c]||0)+e.a;
+      byPerson[e.p]=(byPerson[e.p]||0)+e.a;total+=e.a;
+    });
+    const days=Object.keys(byDay).sort();
+    let bestD="",bestT=0;days.forEach(d=>{const t=Object.values(byDay[d]).reduce((s,v)=>s+v,0);if(t>bestT){bestT=t;bestD=d;}});
+    const chTotals={};Object.values(byCh).forEach(day=>Object.entries(day).forEach(([c,a])=>{chTotals[c]=(chTotals[c]||0)+a;}));
+    return{byDay,byCh,byPerson,total,days,bestD,bestT,chTotals};
+  },[entries,df,dt]);
   const insights=useMemo(()=>{if(fd.length===0)return[];const msgs=[];
     // Current range totals per person
     const cur={};PP.forEach(p=>{cur[p]=0;fd.forEach(d=>{cur[p]+=dd[d]?.[p]||0;});});
@@ -553,7 +566,7 @@ export default function App(){
 
   if(!authed)return loginScreen;
   const isLeft=uiCfg.tabPos==="left";const isBottom=uiCfg.tabPos==="bottom";
-  return(<div style={{minHeight:"100vh",background:T.bg,padding:`${ds(12)}px ${ds(16)}px`,fontFamily:"'Segoe UI',system-ui,sans-serif",color:T.text,fontSize:fs(13),paddingBottom:isBottom?60:undefined}}>
+  return(<div style={{minHeight:"100vh",background:T.bg,padding:`${ds(12)}px ${ds(16)}px`,fontFamily:"'Segoe UI',system-ui,sans-serif",color:T.text,fontSize:fs(13),paddingBottom:isBottom?80:undefined}}>
     <div style={{maxWidth:1400,margin:"0 auto",display:isLeft?"flex":"block",gap:isLeft?ds(16):undefined}}>
       {toast&&<div style={{position:"fixed",top:20,right:20,background:T.toast,border:"1px solid #22c55e40",borderRadius:10,padding:"12px 20px",color:"#22c55e",fontSize:fs(13),fontWeight:600,zIndex:1000}}>{toast}</div>}
       {viewImg&&<div onClick={()=>sViewImg(null)} style={{position:"fixed",inset:0,background:T.overlay,zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}><img src={viewImg} style={{maxWidth:"90%",maxHeight:"90%",borderRadius:8,boxShadow:"0 4px 30px rgba(0,0,0,.6)"}}/><button onClick={()=>sViewImg(null)} style={{position:"absolute",top:16,right:16,background:"transparent",border:"none",color:T.text,fontSize:24,cursor:"pointer"}}>×</button></div>}
@@ -566,7 +579,7 @@ export default function App(){
       {(()=>{const tabItems=[["home","🏠 Home"],["input","💳 Transactions"],["sales","📊 Analytics"],["people","👥 People"],["settings","⚙️ Settings"]].filter(([id])=>!(viewOnly&&id==="input"));
         const tabBtns=tabItems.map(([id,lb])=>(<button key={id} onClick={()=>{sTB(id);if(id==="sales")sSEC("daily");if(id==="input")sSEC("manual");}} style={{flex:isLeft?"none":"0 0 auto",padding:isLeft?`${ds(10)}px ${ds(14)}px`:`${ds(10)}px ${ds(14)}px`,borderRadius:8,border:"none",background:tab===id?T.tabActive:"transparent",color:tab===id?T.text:T.muted,cursor:"pointer",fontSize:fs(12),fontWeight:600,whiteSpace:"nowrap",textAlign:isLeft?"left":"center",width:isLeft?"100%":"auto"}}>{lb}</button>));
         const voTag=viewOnly?<div style={{display:"flex",alignItems:"center",marginLeft:isLeft?0:"auto",padding:"4px 10px",borderRadius:6,background:"rgba(139,92,246,.15)",border:"1px solid rgba(139,92,246,.3)",marginTop:isLeft?4:0}}><span style={{color:"#a78bfa",fontSize:9,fontWeight:700,letterSpacing:1}}>👁 VIEW ONLY</span></div>:null;
-        if(isBottom)return <div style={{position:"fixed",bottom:0,left:0,right:0,display:"flex",gap:2,background:T.card,borderTop:`1px solid ${T.border}`,padding:3,zIndex:900,justifyContent:"center"}}>{tabBtns}{voTag}</div>;
+        if(isBottom)return <div style={{position:"fixed",bottom:0,left:0,right:0,display:"flex",gap:2,background:T.card,borderTop:`1px solid ${T.border}`,padding:3,zIndex:900,justifyContent:"center",touchAction:"manipulation"}}>{tabBtns}{voTag}</div>;
         if(isLeft)return <div style={{minWidth:160,display:"flex",flexDirection:"column",gap:2,background:T.tabBg,borderRadius:10,padding:3,position:"sticky",top:12,alignSelf:"flex-start"}}>{tabBtns}{voTag}</div>;
         return <div style={{display:"flex",gap:2,marginBottom:20,background:T.tabBg,borderRadius:10,padding:3}}>{tabBtns}{voTag}</div>;
       })()}
@@ -607,7 +620,7 @@ export default function App(){
 
 {/* ===== ANALYTICS ===== */}
 {tab==="sales"&&<>
-  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>{[["daily","📊 Daily"],["breakdown","📋 Breakdown"],["channels","💳 Channels"],["products","🏷️ Products"],["consign","📦 Consign"],["monthly","📅 Monthly"],["growth","📈 Growth"],["goal","🎯 Goal"]].filter(([k])=>!uiCfg.hidden?.[`analytics.${k}`]).map(([k,l])=>(<button key={k} onClick={()=>sSEC(k)} style={bt(sec===k)}>{l}</button>))}</div>
+  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",touchAction:"manipulation"}}>{[["daily","📊 Daily"],["breakdown","📋 Breakdown"],["channels","💳 Channels"],["products","🏷️ Products"],["consign","📦 Consign"],["monthly","📅 Monthly"],["growth","📈 Growth"],["goal","🎯 Goal"],["buying","💰 Buying"]].filter(([k])=>!uiCfg.hidden?.[`analytics.${k}`]).map(([k,l])=>(<button key={k} onClick={()=>sSEC(k)} style={bt(sec===k)}>{l}</button>))}</div>
   <div style={{...cr,marginBottom:12,padding:"12px 14px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:8}}><span style={{color:"#71717a",fontSize:10,fontWeight:600}}>RANGE</span>{presets.map(p=>(<button key={p.l} onClick={()=>{sDF(p.f);sDT(p.t);}} style={bt(df===p.f&&dt===p.t)}>{p.l}</button>))}</div>
     <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><input type="date" value={df} onChange={e=>sDF(e.target.value)} style={{...is,fontSize:11,flex:1,minWidth:110,colorScheme:"dark"}}/><span style={{color:"#a1a1aa"}}>→</span><input type="date" value={dt} onChange={e=>sDT(e.target.value)} style={{...is,fontSize:11,flex:1,minWidth:110,colorScheme:"dark"}}/><span style={{color:"#71717a",fontSize:11}}>{fd.length}d</span></div></div>
   {sec==="daily"&&<>
@@ -902,7 +915,7 @@ export default function App(){
     const estMo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const eFmt=d=>`${estMo[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
     const dailyTarget=goal/365;
-    const myT=lastB[goalP]||0;const avgD=myT/daysSoFar;const remain=goal-myT;const daysNeeded=remain>0?Math.ceil(remain/avgD):0;
+    const myT=lastB[goalP]||0;const avgD=daysSoFar>0?myT/daysSoFar:0;const remain=goal-myT;const daysNeeded=remain>0&&avgD>0?Math.ceil(remain/avgD):0;
     const estDate=new Date(today);estDate.setDate(estDate.getDate()+daysNeeded);
     const pct=(myT/goal*100);const expectedLinear=dailyTarget*daysSoFar;const aheadBehind=myT-expectedLinear;
     const onTrack=myT>=expectedLinear;
@@ -1051,6 +1064,62 @@ export default function App(){
           </div>
         </div>;
       })()}
+    </>);})()}
+  {sec==="buying"&&(()=>{
+    const{byDay,byPerson,total,days:bDays,bestD,bestT,chTotals}=buyAgg;
+    const buyPpl=Object.entries(byPerson).sort((a,b)=>b[1]-a[1]);
+    const buyDays=fd.filter(d=>byDay[d]);
+    // Chart data
+    const buyChD=fd.map(d=>{const r={day:SD(d)};buyPpl.forEach(([p])=>{r[p]=byDay[d]?.[p]||0;});r._t=Object.values(byDay[d]||{}).reduce((s,v)=>s+v,0);return r;});
+    // Recent purchases
+    const recent=entries.filter(e=>e.io==="OUT"&&e.d>=df&&e.d<=dt).sort((a,b)=>b.id-a.id).slice(0,30);
+    const chList=Object.entries(chTotals).sort((a,b)=>b[1]-a[1]);
+    return(<>
+      {/* Summary */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:10}}>
+        {[{l:"TOTAL SPENT",v:F(total),c:"#ef4444"},{l:"AVG/DAY",v:F(fd.length>0?total/fd.length:0)},{l:"BIGGEST DAY",v:F(bestT),s:bestD?SD(bestD):"—",c:"#f59e0b"},{l:"PURCHASES",v:recent.length>29?"30+":String(entries.filter(e=>e.io==="OUT"&&e.d>=df&&e.d<=dt).length)}].map((s,i)=>(<div key={i} style={cr}><div style={{color:"#71717a",fontSize:9,fontWeight:600}}>{s.l}</div><div style={{color:s.c||"#fff",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{s.v}</div>{s.s&&<div style={{color:"#71717a",fontSize:10}}>{s.s}</div>}</div>))}
+      </div>
+      {/* Person breakdown */}
+      {buyPpl.length>0&&<div style={{...cr,marginBottom:10,padding:"12px 16px"}}>
+        <div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:8}}>SPENDING BY PERSON</div>
+        {buyPpl.map(([p,amt])=>{const pct=total>0?(amt/total*100):0;return(<div key={p} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <span style={{color:CO[p]||"#888",fontSize:11,fontWeight:700,minWidth:60}}>{p}</span>
+          <div style={{flex:1,height:6,background:"rgba(63,63,70,.4)",borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:CO[p]||"#888",borderRadius:3}}/></div>
+          <span style={{color:"#a1a1aa",fontFamily:"monospace",fontSize:10,minWidth:60,textAlign:"right"}}>{FF(amt)}</span>
+          <span style={{color:"#52525b",fontSize:9,minWidth:30,textAlign:"right"}}>{pct.toFixed(0)}%</span>
+        </div>);})}
+      </div>}
+      {/* Daily chart */}
+      {buyPpl.length>0&&<><div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:6}}>DAILY SPENDING</div>
+      <div style={sx}><ResponsiveContainer width="100%" height={240}>
+        <BarChart data={buyChD} barCategoryGap="15%"><CartesianGrid strokeDasharray="3 3" stroke="rgba(63,63,70,.4)"/><XAxis dataKey="day" tick={{fill:"#888",fontSize:10}} axisLine={{stroke:"#3f3f46"}} tickLine={false} interval={iv}/><YAxis tick={{fill:"#555",fontSize:10}} axisLine={false} tickLine={false} tickFormatter={F} width={50}/><Tooltip content={<TT/>}/>
+          {buyPpl.map(([p])=>(<Bar key={p} dataKey={p} fill={CO[p]||"#888"} radius={[2,2,0,0]} maxBarSize={24}/>))}
+        </BarChart>
+      </ResponsiveContainer></div></>}
+      {/* Channel breakdown */}
+      {chList.length>0&&<div style={{...cr,marginTop:10,padding:"12px 16px"}}>
+        <div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:8}}>SPENDING BY ACCOUNT</div>
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(chList.length,4)},1fr)`,gap:8}}>
+          {chList.map(([ch,amt])=>(<div key={ch} style={{borderTop:`3px solid ${CC[ch]||"#555"}`,padding:"10px",background:"rgba(63,63,70,.2)",borderRadius:8}}>
+            <div style={{color:CC[ch]||"#888",fontSize:10,fontWeight:700}}>{CL[ch]||ch}</div>
+            <div style={{color:"#fafafa",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{FF(amt)}</div>
+            <div style={{color:"#71717a",fontSize:9}}>{total>0?(amt/total*100).toFixed(0):0}%</div>
+          </div>))}
+        </div>
+      </div>}
+      {/* Recent purchases */}
+      {recent.length>0&&<div style={{...cr,marginTop:10,padding:0,overflow:"hidden"}}>
+        <div style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.5)"}}><span style={{color:"#71717a",fontSize:10,fontWeight:600}}>RECENT PURCHASES</span></div>
+        <div style={{maxHeight:300,overflowY:"auto"}}>
+          {recent.map(e=>(<div key={e.id} style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.3)",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{color:CO[e.p]||"#888",fontSize:10,fontWeight:700,minWidth:48}}>{e.p}</span>
+            <div style={{flex:1,minWidth:0}}><div style={{color:"#d4d4d8",fontSize:11,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{(e.r||"").replace(/^BUY:\s*/i,"")}</div>
+              <div style={{color:"#52525b",fontSize:9}}>{SD(e.d)} · {CL[e.c]||e.c}</div></div>
+            <span style={{color:"#ef4444",fontFamily:"monospace",fontSize:11,fontWeight:700}}>-{FX(e.a)}</span>
+          </div>))}
+        </div>
+      </div>}
+      {total===0&&<div style={{textAlign:"center",padding:30,color:"#52525b",fontSize:12}}>No purchases in this date range.</div>}
     </>);})()}
 </>}
 {/* ===== INPUT ===== */}
