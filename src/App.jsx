@@ -1528,15 +1528,21 @@ export default function App(){
       <div><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>DATE</div><input type="date" value={xfDt} onChange={e=>sXfDt(e.target.value)} style={{...is,padding:"8px",colorScheme:"dark",fontSize:11}}/></div>
       <div style={{flex:1}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>NOTE</div><input value={xfNote} onChange={e=>sXfNote(e.target.value)} placeholder="e.g. Trade payout, Collection buy" style={{...is,width:"100%",padding:"8px",fontSize:12}}/></div>
     </div>
+    <div onDrop={handleImgDrop} onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=AC;}} onDragLeave={e=>{e.currentTarget.style.borderColor="#3f3f46";}} style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"8px 12px",borderRadius:6,border:"1px dashed #3f3f46",transition:"border-color .15s"}}>
+      <label style={{color:"#71717a",cursor:"pointer",fontSize:10,fontWeight:600,display:"inline-flex",alignItems:"center",gap:4}}>
+        📷 {cartImg?"Change":"Drop or click"}<input type="file" accept="image/*" onChange={handleCartImg} style={{display:"none"}}/>
+      </label>
+      {cartImg&&<><img src={cartImg} onClick={()=>sViewImg(cartImg)} style={{height:36,borderRadius:4,cursor:"pointer",border:"1px solid #3f3f46"}}/><button onClick={()=>sCartImg(null)} style={{background:"transparent",border:"none",color:"#ef4444",cursor:"pointer",fontSize:14}}>×</button></>}
+    </div>
     <button onClick={()=>{const recips=(xfRecips||[]);const senders=xfSenders||[];
       if(recips.length===0){tw("⚠ Select recipients");return;}
       const total=recips.reduce((s,r)=>s+(parseFloat(r.amt)||0),0);if(total<=0){tw("⚠ Enter amounts");return;}
       const multiFrom=senders.length>1;
       if(multiFrom){const sTotal=senders.reduce((s,x)=>s+(parseFloat(x.amt)||0),0);if(Math.abs(sTotal-total)>0.02){tw(`⚠ FROM total (${FX(sTotal)}) ≠ TO total (${FX(total)})`);return;}}
       const ne=[...entries];const gid="XF"+Date.now();const label=xfNote||`Transfer ${senders.map(s=>s.p).join("+")}→${recips.map(r=>r.p).join(",")}`;
-      senders.forEach((s,i)=>{const a=multiFrom?(parseFloat(s.amt)||0):total;if(a>0){ne.push({id:Date.now()+i,c:xfFromCh==="cash"?"cash":"amex",d:xfDt,p:s.p,a:Math.round(a*100)/100,io:"XFER_OUT",r:label,grp:gid,t:new Date().toISOString()});}});
-      recips.forEach((r,i)=>{const a=parseFloat(r.amt)||0;if(a>0){const rlbl=r.note?`${label} · ${r.note}`:label;ne.push({id:Date.now()+senders.length+i+1,c:xfToCh==="cash"?"cash":"amex",d:xfDt,p:r.p,a:Math.round(a*100)/100,io:"XFER_IN",r:rlbl,grp:gid,t:new Date().toISOString()});}});
-      sE(ne);sv(ne);sXfAmt("");sXfNote("");sXfRecips([]);tw(`✓ Transferred ${FX(total)} from ${senders.map(s=>s.p).join("+")} → ${recips.length} people`);
+      senders.forEach((s,i)=>{const a=multiFrom?(parseFloat(s.amt)||0):total;if(a>0){ne.push({id:Date.now()+i,c:xfFromCh==="cash"?"cash":"amex",d:xfDt,p:s.p,a:Math.round(a*100)/100,io:"XFER_OUT",r:label,grp:gid,t:new Date().toISOString(),...(cartImg?{img:cartImg}:{})});}});
+      recips.forEach((r,i)=>{const a=parseFloat(r.amt)||0;if(a>0){const rlbl=r.note?`${label} · ${r.note}`:label;ne.push({id:Date.now()+senders.length+i+1,c:xfToCh==="cash"?"cash":"amex",d:xfDt,p:r.p,a:Math.round(a*100)/100,io:"XFER_IN",r:rlbl,grp:gid,t:new Date().toISOString(),...(cartImg?{img:cartImg}:{})});}});
+      sE(ne);sv(ne);sXfAmt("");sXfNote("");sXfRecips([]);sCartImg(null);tw(`✓ Transferred ${FX(total)} from ${senders.map(s=>s.p).join("+")} → ${recips.length} people`);
     }} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#ef4444,#10b981)",color:"#fafafa",cursor:"pointer",fontSize:13,fontWeight:700}}>Transfer {(xfRecips||[]).reduce((s,r)=>s+(parseFloat(r.amt)||0),0)>0?FX((xfRecips||[]).reduce((s,r)=>s+(parseFloat(r.amt)||0),0)):""}</button>
   </>}
   </div>}
