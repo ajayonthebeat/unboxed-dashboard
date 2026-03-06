@@ -2231,8 +2231,9 @@ export default function App(){
           // Build comprehensive export for another AI/app to understand
           const commRates={};PP.forEach(p=>{if(OWNERS.has(p))commRates[p]={type:"owner",rate:0,note:"Gets full amount (minus processing fees)"};
             else{const cfg=COMM[p]||DEF_COMM;commRates[p]={type:"consigner",rate:cfg.rate,split:cfg.split,note:`${(cfg.rate*100).toFixed(0)}% commission to ${cfg.split==="BOTH"?"AJAY+DEREK split":cfg.split}`};}});
-          // Revenue by person (all-time)
+          // Revenue by person (all-time) — from dd which is the AUTHORITATIVE source
           const revByPerson={};PP.forEach(p=>{let t=0;Object.values(dd).forEach(day=>{t+=day[p]||0;});if(t>0)revByPerson[p]=Math.round(t*100)/100;});
+          const ytdTotal=Math.round(Object.values(revByPerson).reduce((s,v)=>s+v,0)*100)/100;
           // Revenue by person by month
           const revByMonth={};Object.keys(dd).sort().forEach(d=>{const mo=d.slice(0,7);if(!revByMonth[mo])revByMonth[mo]={};PP.forEach(p=>{if(dd[d]?.[p])revByMonth[mo][p]=(revByMonth[mo][p]||0)+dd[d][p];});});
           Object.keys(revByMonth).forEach(mo=>{Object.keys(revByMonth[mo]).forEach(p=>{revByMonth[mo][p]=Math.round(revByMonth[mo][p]*100)/100;});});
@@ -2242,10 +2243,19 @@ export default function App(){
           // Channel revenue totals
           const revByChannel={};Object.values(cd).forEach(day=>{Object.entries(day).forEach(([c,a])=>{revByChannel[c]=(revByChannel[c]||0)+a;});});
           Object.keys(revByChannel).forEach(c=>{revByChannel[c]=Math.round(revByChannel[c]*100)/100;});
+          // Daily revenue flattened to simple rows for easy parsing
+          const dailyRows=[];Object.keys(dd).sort().forEach(d=>{Object.entries(dd[d]).forEach(([p,a])=>{if(a>0)dailyRows.push({date:d,person:p,revenue:Math.round(a*100)/100});});});
           const data={
-            _README:"Unboxed TCG Dashboard — Full Data Export. This file contains all transaction data, balances, analytics, and configuration for the business.",
+            _README:"Unboxed TCG Dashboard — Full Data Export. IMPORTANT: Use 'ytdRevenue' and 'dailyRevenueRows' for revenue totals — NOT 'transactions'. The transactions array only contains entries added through the app. Historical sales data (from Shopify) is in the daily revenue data. The YTD total below is the CORRECT, AUTHORITATIVE total.",
             exportedAt:new Date().toISOString(),
             exportDate:new Date().toISOString().slice(0,10),
+            ytdRevenue:{
+              _note:"THIS IS THE CORRECT YTD REVENUE. Use these numbers, not transaction sums. Revenue comes from two sources: (1) historical Shopify data baked into the app and (2) transaction entries added through the app. This section combines both.",
+              total:ytdTotal,
+              byPerson:revByPerson,
+              byMonth:revByMonth,
+              byChannel:revByChannel
+            },
             business:{
               name:"Unboxed TCG",
               description:"Trading card game store with multiple owners and consigners",
@@ -2259,36 +2269,29 @@ export default function App(){
               _note:"Current account balances per person. Cash = physical cash. Amex = card/digital. Overall = cash + amex.",
               byPerson:Object.fromEntries(Object.entries(balances).filter(([,b])=>b.cash||b.amex||b.overall).sort(([,a],[,b])=>b.overall-a.overall).map(([p,b])=>[p,{cash:Math.round(b.cash*100)/100,amex:Math.round(b.amex*100)/100,overall:Math.round(b.overall*100)/100}]))
             },
-            analytics:{
-              _note:"Revenue and spending summaries computed from all transactions.",
-              revenueByPerson:revByPerson,
-              revenueByPersonByMonth:revByMonth,
-              revenueByChannel:revByChannel,
-              spendingByPerson:spendByPerson,
-              totalRevenue:Math.round(Object.values(revByPerson).reduce((s,v)=>s+v,0)*100)/100,
-              totalSpending:Math.round(Object.values(spendByPerson).reduce((s,v)=>s+v,0)*100)/100
+            spending:{
+              _note:"Total spending (purchases/expenses) by person from transaction entries.",
+              total:Math.round(Object.values(spendByPerson).reduce((s,v)=>s+v,0)*100)/100,
+              byPerson:spendByPerson
+            },
+            dailyRevenueRows:{
+              _note:"AUTHORITATIVE daily revenue data flattened into rows. Each row = one person's revenue on one day. Sum all rows to get YTD. This includes ALL revenue (historical + app entries).",
+              totalRows:dailyRows.length,
+              rows:dailyRows
             },
             transactions:{
-              _note:"All transaction entries. Fields: id (unique), d (date YYYY-MM-DD), p (person), c (channel: cash/amex/shopify/square), a (amount, always positive), io (type: IN=sale, OUT=expense, CONSIGNMENT=consign sale, XFER_IN/XFER_OUT=transfer, REFUND=refund), r (description), ord (order ID), grp (group ID for linked entries), src (import source: discord/square/shopify), t (ISO timestamp)",
+              _note:"WARNING: These are ONLY entries added through the app (imports, manual orders, transfers). They do NOT include historical Shopify sales. Do NOT sum these for YTD revenue — use 'ytdRevenue.total' instead. Fields: id, date, person, channel (cash/amex/shopify/square), amount (always positive), type (IN=sale, OUT=expense, CONSIGNMENT=consign sale, XFER_IN/XFER_OUT=transfer, REFUND=refund), description, orderRef, groupId, source (discord/square/shopify), timestamp",
               count:entries.length,
               entries:entries.map(e=>({id:e.id,date:e.d,person:e.p,channel:e.c,amount:e.a,type:e.io,description:e.r||"",orderRef:e.ord||"",groupId:e.grp||"",source:e.src||"",timestamp:e.t}))
             },
             bankTransactions:{
-              _note:"Bank account transactions (deposits, withdrawals). Fields: d (date), acct (account name), type (deposit/withdrawal), amt (amount), note (description)",
+              _note:"Bank account transactions (deposits, withdrawals).",
               count:bankTxns.length,
               entries:bankTxns.map(t=>({date:t.d,account:t.acct,type:t.type,amount:t.amt,note:t.note||"",timestamp:t.t}))
             },
             peopleInfo:{
               _note:"Contact info and metadata for each person. May include phone, email, address, venmo, consignId (consignment number), notes.",
               data:pplInfo
-            },
-            dailyRevenue:{
-              _note:"Revenue by person for each day. Keys are dates (YYYY-MM-DD), values are objects mapping person names to revenue amounts.",
-              data:dd
-            },
-            channelRevenue:{
-              _note:"Revenue by channel (shopify/square/cash/amex) for each day.",
-              data:cd
             }
           };
           const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`unboxed-full-export-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
