@@ -193,7 +193,7 @@ export default function App(){
   const[logCh,sLogCh]=useState("all");const[logP,sLogP]=useState("all");const[logIO,sLogIO]=useState("all");const[logDF,sLogDF]=useState("");const[logDT,sLogDT]=useState("");const[confirmDel,sConfirmDel]=useState(null);const[logSel,sLogSel]=useState(new Set());const[logSelMode,sLogSelMode]=useState(false);const[logExp,sLogExp]=useState(new Set());const[logQ,sLogQ]=useState("");const[logSort,sLogSort]=useState("newest");const[selPerson,sSelPerson]=useState(null);const[pplInfo,sPplInfo]=useState({});const[pplTab,sPplTab]=useState("directory");const[prodView,sProdView]=useState("all");const[prodSort,sProdSort]=useState("revenue");
   // Reactive person balances: base S_B + manual entries affect cash/amex per channel
   const balances=useMemo(()=>{const b={};Object.entries(S_B).forEach(([p,v])=>{b[p]={cash:v.cash,amex:v.amex,overall:v.overall};});
-    entries.forEach(e=>{if(!b[e.p])b[e.p]={cash:0,amex:0,overall:0};
+    entries.filter(e=>!e.conv).forEach(e=>{if(!b[e.p])b[e.p]={cash:0,amex:0,overall:0};
       if(e.io==="REFUND"){const amt=-e.a;if(e.c==="venmo"||e.c==="zelle"){b[e.p].venmo=(b[e.p].venmo||0)+amt;}else if(e.c==="cash"){b[e.p].cash+=amt;}else if(e.c==="amex"||e.c==="square"||e.c==="trade"){b[e.p].amex+=amt;}else{b[e.p].cash+=amt;}b[e.p].overall+=amt;return;}
       const isIn=e.io==="IN"||e.io==="CONSIGNMENT"||e.io==="TRADE_IN"||e.io==="XFER_IN";const amt=isIn?e.a:-e.a;
       if(e.c==="venmo"||e.c==="zelle"){b[e.p].venmo=(b[e.p].venmo||0)+amt;}
@@ -481,7 +481,7 @@ export default function App(){
       const k=ne[i].d+"|"+(ne[i].ord||"");if(convDates.has(k))ne[i]={...ne[i],conv:true};
     }
     sE(ne);sv(ne);
-    const nd={...S_ALL},nc={...S_C_NET};ne.forEach(e=>{if(e.io==="IN"||e.io==="CONSIGNMENT"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}});
+    const nd={...S_ALL},nc={...S_C_NET};ne.filter(e=>!e.conv).forEach(e=>{if(e.io==="IN"||e.io==="CONSIGNMENT"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}});
     sDD({...nd});sCD({...nc});const remaining=impItems.filter(it=>!scopeIds.has(it.id)||(it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0)&&!it.fl.includes("refunded")));
     const applied=ne.length-entries.length;const lbl=filter==="convention"?"convention":filter==="instore"?"in-store":"";
     tw(`✓ Imported ${applied}${lbl?" "+lbl:""} entries${refCnt>0?` (${refCnt} refunded skipped)`:""}${remaining.length?` · ${remaining.length} remaining`:""}`);sII(remaining.length>0?remaining:null);};
@@ -574,19 +574,22 @@ export default function App(){
     return{fl,unk,spl,ref,total:impItems.reduce((s,i)=>s+i.amt,0),dates:[...new Set(impItems.map(i=>i.date))].length,count:impItems.length};},[impItems]);
   const filtImp=useMemo(()=>{if(!impItems)return[];if(impFilter==="all")return impItems;if(impFilter==="flags")return impItems.filter(i=>i.fl.length>0);if(impFilter==="split")return impItems.filter(i=>i.fl.includes("split_pay"));if(impFilter==="refunded")return impItems.filter(i=>i.fl.includes("refunded"));return impItems.filter(i=>i.owner==="UNKNOWN"&&(!i.splits||i.splits.length===0));},[impItems,impFilter]);
   const impBreakdown=useMemo(()=>{if(!impItems)return{};
-    const totals={};const add=(p,v)=>{if(v>0)totals[p]=(totals[p]||0)+Math.round(v*100)/100;};
+    const store={};const conv={};const total={};
+    const addTo=(bucket,p,v)=>{if(v>0)bucket[p]=(bucket[p]||0)+Math.round(v*100)/100;};
     const lFee=impCh==="square"?SQ_FEE:impCh==="shopify"?SHOP_FEE:0;
     for(const it of impItems){if(it.fl.includes("refunded"))continue;if(it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0))continue;
+      const isConv=it.saleType==="convention";const bucket=isConv?conv:store;const fee=isConv?0:lFee;
       if(it.splits&&it.splits.length>0){
         for(const splt of it.splits){if(!splt.owner||splt.owner==="UNKNOWN"||!(splt.amt>0))continue;
-          if(OWNERS.has(splt.owner)){add(splt.owner,splt.amt*(1-lFee));}
-          else{const cfg=COMM[splt.owner]||DEF_COMM;add(splt.owner,splt.amt*(1-cfg.rate));const cn=Math.max(0,splt.amt*cfg.rate-splt.amt*lFee);
-            if(cfg.split==="AJAY")add("AJAY",cn);else if(cfg.split==="DEREK")add("DEREK",cn);else{add("AJAY",cn/2);add("DEREK",cn/2);}}}
+          if(OWNERS.has(splt.owner)){addTo(bucket,splt.owner,splt.amt*(1-fee));}
+          else{const cfg=COMM[splt.owner]||DEF_COMM;addTo(bucket,splt.owner,splt.amt*(1-cfg.rate));const cn=Math.max(0,splt.amt*cfg.rate-splt.amt*fee);
+            if(cfg.split==="AJAY")addTo(bucket,"AJAY",cn);else if(cfg.split==="DEREK")addTo(bucket,"DEREK",cn);else{addTo(bucket,"AJAY",cn/2);addTo(bucket,"DEREK",cn/2);}}}
       }else{const eff=it.personAmt!=null?it.personAmt:it.amt;
-        if(OWNERS.has(it.owner)){add(it.owner,eff*(1-lFee));}
-        else{const cfg=COMM[it.owner]||DEF_COMM;add(it.owner,eff*(1-cfg.rate));const cn=Math.max(0,eff*cfg.rate-eff*lFee);
-          if(cfg.split==="AJAY")add("AJAY",cn);else if(cfg.split==="DEREK")add("DEREK",cn);else{add("AJAY",cn/2);add("DEREK",cn/2);}}}}
-    return totals;},[impItems,impCh]);
+        if(OWNERS.has(it.owner)){addTo(bucket,it.owner,eff*(1-fee));}
+        else{const cfg=COMM[it.owner]||DEF_COMM;addTo(bucket,it.owner,eff*(1-cfg.rate));const cn=Math.max(0,eff*cfg.rate-eff*fee);
+          if(cfg.split==="AJAY")addTo(bucket,"AJAY",cn);else if(cfg.split==="DEREK")addTo(bucket,"DEREK",cn);else{addTo(bucket,"AJAY",cn/2);addTo(bucket,"DEREK",cn/2);}}}}
+    const allPpl=new Set([...Object.keys(store),...Object.keys(conv)]);allPpl.forEach(p=>{total[p]=(store[p]||0)+(conv[p]||0);});
+    return{store,conv,total};},[impItems,impCh]);
 
   const is={background:T.inputBg,border:`1px solid ${T.border}`,borderRadius:8,padding:`${ds(8)}px ${ds(12)}px`,color:T.text,fontSize:fs(13),outline:"none"};
   const pl=(a,c=AC)=>({padding:`${ds(4)}px ${ds(12)}px`,borderRadius:20,border:"1px solid",borderColor:a?`${c}60`:T.border,background:a?`${c}15`:"transparent",color:a?c:T.muted,cursor:"pointer",fontSize:fs(11),fontWeight:600});
@@ -1313,15 +1316,20 @@ export default function App(){
           <div style={{...cr,flex:1,minWidth:70,padding:"8px 12px"}}><div style={{color:"#71717a",fontSize:9}}>DATES</div><div style={{color:"#fafafa",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{impStats.dates}</div></div>
           {impStats.unk.length>0&&<div style={{...cr,flex:1,minWidth:70,padding:"8px 12px",borderColor:"#ef444430"}}><div style={{color:"#ef4444",fontSize:9}}>UNKNOWN</div><div style={{color:"#ef4444",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{impStats.unk.length}</div></div>}
         </div>
-        {Object.keys(impBreakdown).length>0&&<div style={{marginTop:10,borderTop:"1px solid #3f3f46",paddingTop:10}}>
+        {Object.keys(impBreakdown.total||{}).length>0&&<div style={{marginTop:10,borderTop:"1px solid #3f3f46",paddingTop:10}}>
           <div style={{color:"#71717a",fontSize:9,fontWeight:600,letterSpacing:1,marginBottom:6}}>WILL BE CREDITED</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-            {PP.filter(p=>impBreakdown[p]>0).map(p=>(
-              <div key={p} style={{background:`${CO[p]}12`,border:`1px solid ${CO[p]}30`,borderRadius:7,padding:"5px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+            {PP.filter(p=>(impBreakdown.total||{})[p]>0).map(p=>{const st=(impBreakdown.store||{})[p]||0;const cv=(impBreakdown.conv||{})[p]||0;const tot=(impBreakdown.total||{})[p]||0;const hasBot=st>0&&cv>0;return(
+              <div key={p} style={{background:`${CO[p]}12`,border:`1px solid ${CO[p]}30`,borderRadius:7,padding:"6px 10px",display:"flex",flexDirection:"column",alignItems:"center",gap:2,minWidth:70}}>
                 <span style={{color:CO[p],fontSize:9,fontWeight:700}}>{p}</span>
-                <span style={{color:"#fafafa",fontFamily:"monospace",fontSize:12,fontWeight:800}}>{FX(impBreakdown[p])}</span>
-              </div>
-            ))}
+                <span style={{color:"#fafafa",fontFamily:"monospace",fontSize:13,fontWeight:800}}>{FX(tot)}</span>
+                {hasBot&&<div style={{display:"flex",gap:6,marginTop:1}}>
+                  <span style={{color:"#06b6d4",fontSize:8,fontFamily:"monospace",fontWeight:600}}>🏪{FX(st)}</span>
+                  <span style={{color:"#f97316",fontSize:8,fontFamily:"monospace",fontWeight:600}}>🎪{FX(cv)}</span>
+                </div>}
+                {!hasBot&&cv>0&&<span style={{color:"#f97316",fontSize:8,fontFamily:"monospace",fontWeight:600}}>🎪 convention</span>}
+                {!hasBot&&st>0&&<span style={{color:"#06b6d4",fontSize:8,fontFamily:"monospace",fontWeight:600}}>🏪 in-store</span>}
+              </div>);})}
           </div>
         </div>}
       </div>
