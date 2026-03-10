@@ -206,6 +206,7 @@ export default function App(){
     bankTxns.forEach(t=>{b[t.acct]+=(t.type==="deposit"?t.amt:-t.amt);});
     entries.forEach(e=>{if(e.c==="amex"&&(e.io==="OUT"||e.io==="PYOUT")&&e.t&&e.t>=AMEX_CUTOFF)b.AMEX-=e.a;});
     return b;},[bankTxns,entries]);
+  const convBalances=useMemo(()=>{const b={};entries.filter(e=>e.conv).forEach(e=>{if(!b[e.p])b[e.p]={total:0,byCh:{}};const isIn=e.io==="IN"||e.io==="CONSIGNMENT"||e.io==="XFER_IN";const amt=isIn?e.a:e.io==="REFUND"?-e.a:-e.a;b[e.p].total+=amt;const ch=e.c||"cash";b[e.p].byCh[ch]=(b[e.p].byCh[ch]||0)+amt;});return b;},[entries]);
 
   useEffect(()=>{(async()=>{try{const r=(() => { try { const v = localStorage.getItem("ub-e3"); return v ? { value: v } : null; } catch(e) { return null; } })();if(r?.value){let p=JSON.parse(r.value);
     // ONE-TIME MIGRATION: Fix consignment entries that don't have commission splits
@@ -374,9 +375,11 @@ export default function App(){
   const COMM={LJ:{rate:0.10,split:"AJAY"},EVAN:{rate:0.25,split:"BOTH"}};const DEF_COMM={rate:0.15,split:"BOTH"};
   const OWNERS=new Set(["AJAY","DEREK","SHARED"]);
   const SQ_FEE=0.026;
-  const applyImport=()=>{if(!impItems)return;const ne=[...entries];let cnt=0;let refCnt=0;
+  const applyImport=(filter="all")=>{if(!impItems)return;const ne=[...entries];let cnt=0;let refCnt=0;
+    const scope=filter==="convention"?impItems.filter(i=>i.saleType==="convention"):filter==="instore"?impItems.filter(i=>i.saleType!=="convention"):impItems;
+    const scopeIds=new Set(scope.map(i=>i.id));
     const ts=()=>Date.now()+cnt++;
-    for(const it of impItems){if(it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0))continue;
+    for(const it of scope){if(it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0))continue;
       if(it.fl.includes("refunded")){refCnt++;continue;}
       if(it.fl.includes("tax"))continue;
       if(it.fl.includes("duplicate"))continue;
@@ -471,11 +474,17 @@ export default function App(){
         }
       }
     }
-    if(impSrc){for(let i=entries.length;i<ne.length;i++){ne[i]={...ne[i],src:impSrc};}}
+    // Tag convention and source on new entries
+    const convDates=new Set(scope.filter(i=>i.saleType==="convention").map(i=>i.date+"|"+i.order));
+    for(let i=entries.length;i<ne.length;i++){
+      if(impSrc)ne[i]={...ne[i],src:impSrc};
+      const k=ne[i].d+"|"+(ne[i].ord||"");if(convDates.has(k))ne[i]={...ne[i],conv:true};
+    }
     sE(ne);sv(ne);
     const nd={...S_ALL},nc={...S_C_NET};ne.forEach(e=>{if(e.io==="IN"||e.io==="CONSIGNMENT"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}});
-    sDD({...nd});sCD({...nc});const remaining=impItems.filter(it=>it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0)&&!it.fl.includes("refunded"));
-    tw(`✓ Imported ${ne.length-entries.length} entries${refCnt>0?` (${refCnt} refunded skipped)`:""}${remaining.length?` · ${remaining.length} still unassigned`:""}`);sII(remaining.length>0?remaining:null);};
+    sDD({...nd});sCD({...nc});const remaining=impItems.filter(it=>!scopeIds.has(it.id)||(it.owner==="UNKNOWN"&&(!it.splits||it.splits.length===0)&&!it.fl.includes("refunded")));
+    const applied=ne.length-entries.length;const lbl=filter==="convention"?"convention":filter==="instore"?"in-store":"";
+    tw(`✓ Imported ${applied}${lbl?" "+lbl:""} entries${refCnt>0?` (${refCnt} refunded skipped)`:""}${remaining.length?` · ${remaining.length} remaining`:""}`);sII(remaining.length>0?remaining:null);};
 
   const stfTot=useMemo(()=>{const t={};STF.forEach(s=>{t[s]={o:0}});Object.entries(S_SC).forEach(([d,day])=>{if(d>=sdf&&d<=sdt)STF.forEach(s=>{t[s].o+=(day[s]||0)})});STF.forEach(s=>{if(S_SA[s])Object.assign(t[s],S_SA[s])});return t},[sdf,sdt]);
   const stfD=useMemo(()=>Object.keys(S_SC).sort().filter(d=>d>=sdf&&d<=sdt).map(d=>{const r={day:SD(d)};STF.forEach(s=>{r[s]=S_SC[d]?.[s]||0});return r}),[sdf,sdt]);
@@ -643,7 +652,7 @@ export default function App(){
 
 {/* ===== ANALYTICS ===== */}
 {tab==="sales"&&<>
-  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",touchAction:"manipulation"}}>{[["daily","📊 Daily"],["breakdown","📋 Breakdown"],["channels","💳 Channels"],["products","🏷️ Products"],["consign","📦 Consign"],["monthly","📅 Monthly"],["growth","📈 Growth"],["goal","🎯 Goal"],["buying","💰 Buying"]].filter(([k])=>!uiCfg.hidden?.[`analytics.${k}`]).map(([k,l])=>(<button key={k} onClick={()=>sSEC(k)} style={bt(sec===k)}>{l}</button>))}</div>
+  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",touchAction:"manipulation"}}>{[["daily","📊 Daily"],["breakdown","📋 Breakdown"],["channels","💳 Channels"],["products","🏷️ Products"],["consign","📦 Consign"],["monthly","📅 Monthly"],["growth","📈 Growth"],["goal","🎯 Goal"],["buying","💰 Buying"],["convention","🎪 Convention"]].filter(([k])=>!uiCfg.hidden?.[`analytics.${k}`]).map(([k,l])=>(<button key={k} onClick={()=>sSEC(k)} style={bt(sec===k)}>{l}</button>))}</div>
   <div style={{...cr,marginBottom:12,padding:"12px 14px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:8}}><span style={{color:"#71717a",fontSize:10,fontWeight:600}}>RANGE</span>{presets.map(p=>(<button key={p.l} onClick={()=>{sDF(p.f);sDT(p.t);}} style={bt(df===p.f&&dt===p.t)}>{p.l}</button>))}</div>
     <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><input type="date" value={df} onChange={e=>sDF(e.target.value)} style={{...is,fontSize:11,flex:1,minWidth:110,colorScheme:"dark"}}/><span style={{color:"#a1a1aa"}}>→</span><input type="date" value={dt} onChange={e=>sDT(e.target.value)} style={{...is,fontSize:11,flex:1,minWidth:110,colorScheme:"dark"}}/><span style={{color:"#71717a",fontSize:11}}>{fd.length}d</span></div></div>
   <EB key={sec}>
@@ -1145,6 +1154,80 @@ export default function App(){
       </div>}
       {total===0&&<div style={{textAlign:"center",padding:30,color:"#52525b",fontSize:12}}>No purchases in this date range.</div>}
     </>);})()}
+  {sec==="convention"&&(()=>{
+    const convEntries=entries.filter(e=>e.conv&&e.d>=df&&e.d<=dt);
+    const allConvEntries=entries.filter(e=>e.conv);
+    const salesOnly=convEntries.filter(e=>e.io==="IN"||e.io==="CONSIGNMENT");
+    const totalRev=salesOnly.reduce((s,e)=>s+e.a,0);
+    const xfersOut=convEntries.filter(e=>e.io==="XFER_OUT");
+    const totalXfOut=xfersOut.reduce((s,e)=>s+e.a,0);
+    // Per-person breakdown
+    const byPerson={};convEntries.forEach(e=>{if(!byPerson[e.p])byPerson[e.p]={earned:0,xfOut:0,byCh:{}};const isIn=e.io==="IN"||e.io==="CONSIGNMENT"||e.io==="XFER_IN";if(e.io==="XFER_OUT"){byPerson[e.p].xfOut+=e.a;}else{const amt=isIn?e.a:-e.a;byPerson[e.p].earned+=amt;}const ch=e.c||"cash";byPerson[e.p].byCh[ch]=(byPerson[e.p].byCh[ch]||0)+(isIn?e.a:-e.a);});
+    const pplList=Object.entries(byPerson).sort((a,b)=>b[1].earned-a[1].earned);
+    // Payment method totals
+    const chTotals={};salesOnly.forEach(e=>{const ch=e.c||"cash";chTotals[ch]=(chTotals[ch]||0)+e.a;});
+    const chList=Object.entries(chTotals).sort((a,b)=>b[1]-a[1]);
+    // All-time balances from convBalances memo
+    const allTimePpl=Object.entries(convBalances).filter(([,v])=>v.total!==0).sort((a,b)=>b[1].total-a[1].total);
+    // Recent convention entries
+    const recent=convEntries.sort((a,b)=>b.id-a.id).slice(0,30);
+    return(<>
+      {/* Summary */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
+        {[{l:"CONVENTION REVENUE",v:FF(totalRev),c:"#f97316"},{l:"CASHED OUT",v:FF(totalXfOut),c:"#a78bfa"},{l:"SALES",v:String(salesOnly.length)}].map((s,i)=>(<div key={i} style={cr}><div style={{color:"#71717a",fontSize:9,fontWeight:600}}>{s.l}</div><div style={{color:s.c||"#fff",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{s.v}</div></div>))}
+      </div>
+      {/* All-time person balances */}
+      {allTimePpl.length>0&&<div style={{...cr,marginBottom:10,padding:"14px 16px"}}>
+        <div style={{color:"#f97316",fontSize:10,fontWeight:700,marginBottom:10}}>🎪 CONVENTION BALANCES (ALL TIME)</div>
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(allTimePpl.length,3)},1fr)`,gap:8}}>
+          {allTimePpl.map(([p,v])=>{const bal=v.total;return(<div key={p} style={{...cr,padding:"10px 12px",borderTop:`3px solid ${CO[p]||"#888"}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <span style={{color:CO[p]||"#888",fontSize:12,fontWeight:800}}>{p}</span>
+              <span style={{color:bal<0?"#ef4444":"#22c55e",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{FX(bal)}</span>
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
+              {Object.entries(v.byCh).filter(([,a])=>a!==0).map(([ch,a])=>(<span key={ch} style={{fontSize:8,color:CC[ch]||"#71717a",fontFamily:"monospace"}}>{CL[ch]||ch}: {FX(a)}</span>))}
+            </div>
+            {bal>0&&<button onClick={()=>{const amt=parseFloat(prompt(`Cash out ${p}?\nConvention balance: ${FX(bal)}\nEnter amount:`));if(!amt||isNaN(amt)||amt<=0||amt>bal)return;const gid=`CONV-XF-${Date.now()}`;const ne=[...entries,{id:Date.now(),c:"amex",d:TODAY,p,a:Math.round(amt*100)/100,io:"XFER_OUT",r:`Convention cash-out → Amex`,grp:gid,conv:true,t:new Date().toISOString()},{id:Date.now()+1,c:"amex",d:TODAY,p,a:Math.round(amt*100)/100,io:"XFER_IN",r:`Convention cash-out ← Convention`,grp:gid,t:new Date().toISOString()}];sE(ne);sv(ne);tw(`✓ Cashed out ${FX(amt)} from ${p}'s convention → Amex`);}} style={{padding:"4px 10px",borderRadius:5,border:"1px solid #a78bfa40",background:"rgba(167,139,250,.1)",color:"#a78bfa",cursor:"pointer",fontSize:9,fontWeight:700,width:"100%"}}>💸 Cash Out → Amex</button>}
+          </div>);})}
+        </div>
+      </div>}
+      {/* Payment method breakdown */}
+      {chList.length>0&&<div style={{...cr,marginBottom:10,padding:"12px 16px"}}>
+        <div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:8}}>REVENUE BY PAYMENT METHOD</div>
+        <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(chList.length,4)},1fr)`,gap:8}}>
+          {chList.map(([ch,amt])=>(<div key={ch} style={{borderTop:`3px solid ${CC[ch]||"#555"}`,padding:"10px",background:"rgba(63,63,70,.2)",borderRadius:8}}>
+            <div style={{color:CC[ch]||"#888",fontSize:10,fontWeight:700}}>{CL[ch]||ch}</div>
+            <div style={{color:"#fafafa",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{FF(amt)}</div>
+            <div style={{color:"#71717a",fontSize:9}}>{totalRev>0?(amt/totalRev*100).toFixed(0):0}%</div>
+          </div>))}
+        </div>
+      </div>}
+      {/* Per-person earnings this period */}
+      {pplList.length>0&&<div style={{...cr,marginBottom:10,padding:"12px 16px"}}>
+        <div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:8}}>EARNINGS THIS PERIOD</div>
+        {pplList.map(([p,v])=>{const pct=totalRev>0?(v.earned/totalRev*100):0;return(<div key={p} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <span style={{color:CO[p]||"#888",fontSize:11,fontWeight:700,minWidth:60}}>{p}</span>
+          <div style={{flex:1,height:6,background:"rgba(63,63,70,.4)",borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:CO[p]||"#888",borderRadius:3}}/></div>
+          <span style={{color:"#a1a1aa",fontFamily:"monospace",fontSize:10,minWidth:60,textAlign:"right"}}>{FF(v.earned)}</span>
+          <span style={{color:"#52525b",fontSize:9,minWidth:30,textAlign:"right"}}>{pct.toFixed(0)}%</span>
+        </div>);})}
+      </div>}
+      {/* Recent convention entries */}
+      {recent.length>0&&<div style={{...cr,padding:0,overflow:"hidden"}}>
+        <div style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.5)"}}><span style={{color:"#f97316",fontSize:10,fontWeight:600}}>🎪 RECENT CONVENTION ENTRIES</span></div>
+        <div style={{maxHeight:300,overflowY:"auto"}}>
+          {recent.map(e=>(<div key={e.id} style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.3)",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{color:CO[e.p]||"#888",fontSize:10,fontWeight:700,minWidth:48}}>{e.p}</span>
+            <span style={{fontSize:8,fontWeight:700,padding:"1px 6px",borderRadius:4,border:`1px solid ${CC[e.c]||"#555"}40`,background:`${CC[e.c]||"#555"}10`,color:CC[e.c]||"#555"}}>{CL[e.c]||e.c}</span>
+            <div style={{flex:1,minWidth:0}}><div style={{color:"#d4d4d8",fontSize:11,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.r||""}</div>
+              <div style={{color:"#52525b",fontSize:9}}>{SD(e.d)}</div></div>
+            <span style={{color:e.io==="XFER_OUT"?"#a78bfa":"#22c55e",fontFamily:"monospace",fontSize:11,fontWeight:700}}>{e.io==="XFER_OUT"?"-":""}{FX(e.a)}</span>
+          </div>))}
+        </div>
+      </div>}
+      {allConvEntries.length===0&&<div style={{textAlign:"center",padding:40,color:"#52525b",fontSize:12}}>No convention sales yet.<br/><span style={{fontSize:10,color:"#3f3f46"}}>Import orders with "convention" in notes or use the 🎪 button to tag items</span></div>}
+    </>);})()}
   </EB>
 </>}
 {/* ===== INPUT ===== */}
@@ -1176,7 +1259,9 @@ export default function App(){
       <div style={{...cr,padding:"14px 18px",marginBottom:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <span style={{fontSize:13,fontWeight:700}}>{CL[impCh]} — {impStats.count} items</span>
-          <div style={{display:"flex",gap:6}}><button onClick={()=>sII(null)} style={{padding:"5px 12px",borderRadius:6,border:"1px solid #3f3f46",background:"transparent",color:"#a1a1aa",cursor:"pointer",fontSize:11}}>Cancel</button><button onClick={applyImport} style={{padding:"5px 16px",borderRadius:6,border:"none",background:"#10b981",color:"#fafafa",cursor:"pointer",fontSize:11,fontWeight:700}}>✓ Apply</button></div>
+          <div style={{display:"flex",gap:6}}><button onClick={()=>sII(null)} style={{padding:"5px 12px",borderRadius:6,border:"1px solid #3f3f46",background:"transparent",color:"#a1a1aa",cursor:"pointer",fontSize:11}}>Cancel</button>
+            {(()=>{const convC=impItems.filter(i=>i.saleType==="convention").length;const storeC=impItems.filter(i=>i.saleType!=="convention").length;return<>{storeC>0&&convC>0&&<button onClick={()=>applyImport("instore")} style={{padding:"5px 12px",borderRadius:6,border:"1px solid #06b6d440",background:"rgba(6,182,212,.1)",color:"#06b6d4",cursor:"pointer",fontSize:10,fontWeight:700}}>In-Store ({storeC})</button>}{convC>0&&storeC>0&&<button onClick={()=>applyImport("convention")} style={{padding:"5px 12px",borderRadius:6,border:"1px solid #f9731640",background:"rgba(249,115,22,.1)",color:"#f97316",cursor:"pointer",fontSize:10,fontWeight:700}}>🎪 Convention ({convC})</button>}<button onClick={()=>applyImport("all")} style={{padding:"5px 16px",borderRadius:6,border:"none",background:"#10b981",color:"#fafafa",cursor:"pointer",fontSize:11,fontWeight:700}}>✓ Apply All</button></>;})()}
+          </div>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           <div style={{...cr,flex:1,minWidth:70,padding:"8px 12px"}}><div style={{color:"#71717a",fontSize:9}}>TOTAL</div><div style={{color:"#22c55e",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{FF(impStats.total)}</div></div>
@@ -1298,9 +1383,11 @@ export default function App(){
                 </div>);})}
             </div>);})}
         </div>);})()}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,padding:"8px 14px",background:"rgba(63,63,70,.3)",borderRadius:8}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,padding:"8px 14px",background:"rgba(63,63,70,.3)",borderRadius:8,flexWrap:"wrap",gap:6}}>
         <span style={{color:impStats.unk.length?"#ef4444":"#10b981",fontSize:11}}>{impStats.unk.length?`${impStats.unk.length} unknown → skipped`:"✓ All assigned"}</span>
-        <button onClick={applyImport} style={{padding:"8px 24px",borderRadius:8,border:"none",background:"#10b981",color:"#fafafa",cursor:"pointer",fontSize:12,fontWeight:700}}>Apply {impStats.count-impStats.unk.length}</button>
+        <div style={{display:"flex",gap:6}}>
+          {(()=>{const convC=impItems.filter(i=>i.saleType==="convention").length;const storeC=impItems.filter(i=>i.saleType!=="convention").length;return<>{storeC>0&&convC>0&&<button onClick={()=>applyImport("instore")} style={{padding:"6px 14px",borderRadius:8,border:"1px solid #06b6d440",background:"rgba(6,182,212,.1)",color:"#06b6d4",cursor:"pointer",fontSize:11,fontWeight:700}}>In-Store ({storeC})</button>}{convC>0&&storeC>0&&<button onClick={()=>applyImport("convention")} style={{padding:"6px 14px",borderRadius:8,border:"1px solid #f9731640",background:"rgba(249,115,22,.1)",color:"#f97316",cursor:"pointer",fontSize:11,fontWeight:700}}>🎪 Convention ({convC})</button>}<button onClick={()=>applyImport("all")} style={{padding:"8px 24px",borderRadius:8,border:"none",background:"#10b981",color:"#fafafa",cursor:"pointer",fontSize:12,fontWeight:700}}>Apply All ({impStats.count-impStats.unk.length})</button></>;})()}
+        </div>
       </div>
     </>}
     {/* === MANUAL ORDER FORM === */}
@@ -2208,6 +2295,7 @@ export default function App(){
     </SH>
     <SH id="log" icon="📋" label="UPDATE LOG">
       {[
+        {v:"1.3.0",items:["Selective Apply — apply In-Store, Convention, or All separately","🎪 Convention Analytics tab — separate convention account per person","Convention balances by payment method (Venmo, Zelle, Cash, Amex)","💸 Cash Out — transfer convention earnings to main Amex account","Convention entries tagged and tracked independently from regular sales"]},
         {v:"1.2.3",items:["Move sales to/from Convention section (🎪 and ↩ buttons)"]},
         {v:"1.2.2",items:["📦 Unboxed CSV import option","🎪 Convention Sales split into separate section grouped by payment method"]},
         {v:"1.2.1",items:["Discord parses date from message (M/D/YYYY) instead of defaulting to today","Discord shows staff name (👤 badge) and 📝 Notes on import preview","🎪 Convention Sale support in Discord import","Venmo & Zelle payment channels — tracked separately, don't affect cash/amex balances","AI export matches new finance app backend format (daily earnings, type/channel mapping)","Analytics date range defaults to Jan 1"]},
