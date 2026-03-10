@@ -183,7 +183,13 @@ export default function App(){
     </div>
   </div>);
   const[ct,sCT]=useState("area");const[tab,sTB]=useState("home");const[cv,sCV]=useState("stacked");const[bv,sBV]=useState("grouped");const[showTot,sSTot]=useState(false);const[visCh,sVisCh]=useState(["shopify","square","cash","amex"]);const[stgExp,sStgExp]=useState(new Set());
-  const[toast,sT]=useState(null);const[impItems,sII]=useState(null);const[impCh,sIC]=useState("");const[impFilter,sIF]=useState("all");const[discMode,sDiscMode]=useState(false);const[impSrc,sImpSrc]=useState("");
+  const[toast,sT]=useState(null);const[impFilter,sIF]=useState("all");const[discMode,sDiscMode]=useState(false);
+  const[impItems,sII]=useState(()=>{try{const v=localStorage.getItem("ub-imp");return v?JSON.parse(v):null;}catch(e){return null;}});
+  const[impCh,sIC]=useState(()=>{try{return localStorage.getItem("ub-impCh")||"";}catch(e){return"";}});
+  const[impSrc,sImpSrc]=useState(()=>{try{return localStorage.getItem("ub-impSrc")||"";}catch(e){return"";}});
+  useEffect(()=>{try{if(impItems)localStorage.setItem("ub-imp",JSON.stringify(impItems));else localStorage.removeItem("ub-imp");}catch(e){}},[impItems]);
+  useEffect(()=>{try{if(impCh)localStorage.setItem("ub-impCh",impCh);else localStorage.removeItem("ub-impCh");}catch(e){}},[impCh]);
+  useEffect(()=>{try{if(impSrc)localStorage.setItem("ub-impSrc",impSrc);else localStorage.removeItem("ub-impSrc");}catch(e){}},[impSrc]);
   const[stfP,sSTP]=useState(null);const[gV,sGV]=useState("cum");const[sec,sSEC]=useState("daily");
   const[gPP,sGPP]=useState(["AJAY","DEREK","SHARED","LJ"]);const[sdf,sSDF]=useState("2026-01-01");const[sdt,sSDT]=useState(TODAY);const[goalP,sGoalP]=useState("AJAY");
   const[cart,sCart]=useState([]);const[ciP,sCIP]=useState("AJAY");const[ciN,sCIN]=useState("");const[ciQ,sCIQ]=useState("1");const[ciA,sCIA]=useState("");const[ciIO,sCIIO]=useState("IN");const[cartCh,sCartCh]=useState("cash");const[cartDt,sCartDt]=useState(TODAY);const[bkSort,sBkSort]=useState({col:"date",dir:"desc"});const[itemCat,sItemCat]=useState("");const[sealGame,sSealGame]=useState("");const[sealSeries,sSealSeries]=useState("");const[sealSub,sSealSub]=useState("");const[sealType,sSealType]=useState("");const[cartImg,sCartImg]=useState(null);const[viewImg,sViewImg]=useState(null);
