@@ -24,8 +24,8 @@ const CID={"0001":"DEREK","0002":"AJAY","0012":"SHARED","0063":"LJ","0003":"DERE
 
 const PP=["DEREK","AJAY","SHARED","LJ","ALEX","JANELY","EVAN","MARIANNA","ARTURO","DYLAN","CARTER","NESHA","HANNAH","BLUM","PATTY","MYKA"];
 const CO={"DEREK":"#3b82f6","AJAY":"#f59e0b","SHARED":"#10b981","LJ":"#ef4444","ALEX":"#a78bfa","JANELY":"#ec4899","EVAN":"#06b6d4","MARIANNA":"#f97316","ARTURO":"#84cc16","DYLAN":"#818cf8","CARTER":"#14b8a6","NESHA":"#fb7185","HANNAH":"#c084fc","BLUM":"#78716c","PATTY":"#f472b6","MYKA":"#818cf8","GUEST":"#78716c"};
-const CC={"shopify":"#96bf48","square":"#555d63","cash":"#22c55e","amex":"#3b82f6"};
-const CL={"shopify":"Shopify","square":"Square","cash":"Cash","amex":"Amex"};
+const CC={"shopify":"#96bf48","square":"#555d63","cash":"#22c55e","amex":"#3b82f6","venmo":"#008CFF","zelle":"#6D1ED4"};
+const CL={"shopify":"Shopify","square":"Square","cash":"Cash","amex":"Amex","venmo":"Venmo","zelle":"Zelle"};
 const CSG={"JC":"JANELY","EVD":"EVAN","DG":"DYLAN","DC":"CARTER","MR":"MARIANNA"};
 const DM={"JANELY":"JANELY","DEREKS 16":"DEREK","KINGLY 16":"DEREK","PATRICIA 14":"SHARED","VEROS IPHONE":"AJAY"};
 const F=v=>v>=1000?`$${(v/1000).toFixed(1)}K`:`$${Math.round(v)}`;
@@ -70,17 +70,25 @@ function parseSquareCSV(t,pplInfo){const{data:rows}=Papa.parse(t,{header:true,sk
     if(!n||n==="nan")fl.push("no_notes");
     items.push({id:items.length,date,name:n||"Custom Amount",amt,owner,fl,device:dev,order:""});}
   return{items,channel:"square"};}
-function parseDiscord(text){const blocks=text.split(/(?=🛒|🤝)/);const allItems=[];let mainCh="cash";const date=new Date().toISOString().slice(0,10);
-  for(const block of blocks){if(!block.trim())continue;const lines=block.split('\n').map(l=>l.trim());let channel="cash";let txnId="";
+function parseDiscord(text){const blocks=text.split(/(?=🛒|🤝|🎪)/);const allItems=[];let mainCh="cash";const today=new Date().toISOString().slice(0,10);
+  for(const block of blocks){if(!block.trim())continue;const lines=block.split('\n').map(l=>l.trim());let channel="cash";let txnId="";let staff="";let notes="";let date=today;
+    // Parse date from "M/D/YYYY" pattern anywhere in block
+    const dateM=block.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if(dateM){const mm=dateM[1].padStart(2,"0");const dd=dateM[2].padStart(2,"0");const yyyy=dateM[3];date=`${yyyy}-${mm}-${dd}`;}
     const txIdM=block.match(/Transaction:\s*((?:POS|PVT)-[A-Z0-9]+)/i);if(txIdM)txnId=txIdM[1];
+    // Parse staff name
+    for(let i=0;i<lines.length;i++){if(/^staff$/i.test(lines[i])&&lines[i+1]){staff=lines[i+1].trim();}}
+    // Parse notes (after 📝 Notes)
+    const notesIdx=block.indexOf("📝 Notes");
+    if(notesIdx>=0){const noteLines=block.substring(notesIdx+8).split('\n').map(l=>l.trim()).filter(l=>l&&!l.startsWith("Transaction:"));notes=noteLines.join("; ");}
     for(let i=0;i<lines.length;i++){const l=lines[i];
-      if(/^payment$/i.test(l)&&lines[i+1]){const pm=lines[i+1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
-      const pmM=l.match(/^payment[:\s]+(.+)/i);if(pmM){const pm=pmM[1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else channel="cash";}
+      if(/^payment$/i.test(l)&&lines[i+1]){const pm=lines[i+1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else if(pm.includes("venmo"))channel="venmo";else if(pm.includes("zelle"))channel="zelle";else channel="cash";}
+      const pmM=l.match(/^payment[:\s]+(.+)/i);if(pmM){const pm=pmM[1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else if(pm.includes("venmo"))channel="venmo";else if(pm.includes("zelle"))channel="zelle";else channel="cash";}
       const im=l.match(/^[•·\-]\s*(.+?)\s*(?:—|=)\s*\$([0-9,.]+)\s*\((\w+)\)\s*$/);
       if(im){const name=im[1].split('—')[0].trim().substring(0,80);const amt=parseFloat(im[2].replace(/,/g,""))||0;const ow=im[3].toUpperCase();const owner=PP.includes(ow)?ow:"UNKNOWN";
-        if(amt>0)allItems.push({id:allItems.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:txnId,device:"",ch:channel});}}
+        if(amt>0)allItems.push({id:allItems.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:txnId,device:"",ch:channel,staff,notes});}}
     const txM=block.match(/\+\s*\$([0-9,.]+)\s*tax/i);
-    if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)allItems.push({id:allItems.length,date,name:"Tax",amt:tax,owner:"TAX",fl:["tax"],order:txnId,device:"",ch:channel});}
+    if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)allItems.push({id:allItems.length,date,name:"Tax",amt:tax,owner:"TAX",fl:["tax"],order:txnId,device:"",ch:channel,staff,notes});}
     if(allItems.length>0)mainCh=channel;}
   return{items:allItems,channel:mainCh};}
 const TT=({active,payload,label})=>{if(!active||!payload)return null;const it=payload.filter(p=>p.value>0&&p.dataKey!=="_t"&&p.dataKey!=="_total").sort((a,b)=>b.value-a.value);const tot=it.reduce((s,p)=>s+p.value,0);
@@ -100,7 +108,7 @@ export default function App(){
   const S_ALL=useMemo(()=>{const m={};Object.entries(S_D).forEach(([d,pp])=>{m[d]={};Object.entries(pp).forEach(([p,v])=>{if(d>=SHOP_FEE_START&&ownSet0.has(p)){m[d][p]=Math.round(v*(1-SHOP_FEE)*100)/100;}else{m[d][p]=v;}});});Object.entries(S_X||{}).forEach(([d,pp])=>{if(!m[d])m[d]={};Object.entries(pp).forEach(([p,v])=>{m[d]={...m[d]};m[d][p]=(m[d][p]||0)+v;});});return m;},[]);
   const S_C_NET=useMemo(()=>{const m={};Object.entries(S_C).forEach(([d,chs])=>{m[d]={...chs};if(d>=SHOP_FEE_START&&m[d].shopify)m[d].shopify=Math.round(m[d].shopify*(1-SHOP_FEE)*100)/100;});return m;},[]);
   const[dd,sDD]=useState(S_ALL);const[cd,sCD]=useState(S_C_NET);const[entries,sE]=useState([]);
-  const[df,sDF]=useState(daysAgo(7));const[dt,sDT]=useState(TODAY);
+  const[df,sDF]=useState("2026-01-01");const[dt,sDT]=useState(TODAY);
   const[sp,sSP]=useState(["DEREK","AJAY","LJ","SHARED"]);const[search,sSR]=useState("");
   const[authed,sAuthed]=useState(false);const[viewOnly,sViewOnly]=useState(false);const[loginPw,sLoginPw]=useState("");const[showPw,sShowPw]=useState(false);
   const[pwStore,sPwStore]=useState({});
@@ -173,9 +181,10 @@ export default function App(){
   // Reactive person balances: base S_B + manual entries affect cash/amex per channel
   const balances=useMemo(()=>{const b={};Object.entries(S_B).forEach(([p,v])=>{b[p]={cash:v.cash,amex:v.amex,overall:v.overall};});
     entries.forEach(e=>{if(!b[e.p])b[e.p]={cash:0,amex:0,overall:0};
-      if(e.io==="REFUND"){const amt=-e.a;if(e.c==="cash"){b[e.p].cash+=amt;}else if(e.c==="amex"||e.c==="square"||e.c==="trade"){b[e.p].amex+=amt;}else{b[e.p].cash+=amt;}b[e.p].overall+=amt;return;}
+      if(e.io==="REFUND"){const amt=-e.a;if(e.c==="venmo"||e.c==="zelle"){b[e.p].venmo=(b[e.p].venmo||0)+amt;}else if(e.c==="cash"){b[e.p].cash+=amt;}else if(e.c==="amex"||e.c==="square"||e.c==="trade"){b[e.p].amex+=amt;}else{b[e.p].cash+=amt;}b[e.p].overall+=amt;return;}
       const isIn=e.io==="IN"||e.io==="CONSIGNMENT"||e.io==="TRADE_IN"||e.io==="XFER_IN";const amt=isIn?e.a:-e.a;
-      if(e.c==="cash"){b[e.p].cash+=amt;}else if(e.c==="amex"||e.c==="square"||e.c==="trade"){b[e.p].amex+=amt;}else{b[e.p].cash+=amt;}
+      if(e.c==="venmo"||e.c==="zelle"){b[e.p].venmo=(b[e.p].venmo||0)+amt;}
+      else if(e.c==="cash"){b[e.p].cash+=amt;}else if(e.c==="amex"||e.c==="square"||e.c==="trade"){b[e.p].amex+=amt;}else{b[e.p].cash+=amt;}
       b[e.p].overall+=amt;});
     return b;},[entries]);
   // Separate bank account balances (AMEX card, CHASE checking)
@@ -1184,6 +1193,7 @@ export default function App(){
             return(<div key={it.id}>
               {newOrd&&it.order&&<div style={{padding:"6px 14px",background:"rgba(6,182,212,.04)",borderTop:idx>0?"2px solid #52525b":"none",marginTop:idx>0?4:0,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <span style={{color:"#06b6d4",fontSize:12,fontWeight:800,fontFamily:"monospace"}}>{it.order}</span><span style={{color:"#71717a",fontSize:9}}>{grp.length} item{grp.length>1?"s":""}</span><span style={{color:"#fafafa",fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{FX(ordTotal)}</span>
+                {it.staff&&<span style={{fontSize:8,fontWeight:600,padding:"1px 6px",borderRadius:4,border:"1px solid #a78bfa30",background:"rgba(167,139,250,.08)",color:"#a78bfa"}}>👤 {it.staff}</span>}
                 {(()=>{const ch=grp[0]?.ch||impCh;const chL=CL[ch]||ch;const chC=CC[ch]||"#71717a";return <span style={{fontSize:8,fontWeight:700,padding:"1px 6px",borderRadius:4,border:`1px solid ${chC}40`,background:`${chC}10`,color:chC}}>→ {chL}</span>;})()}
                 {hasSplitInGrp&&<><span style={{color:"#96bf48",fontSize:9}}>Shop: <b>{FX(ordShop)}</b></span>{ordCash>0&&<span style={{color:AC,fontSize:9}}>Cash: <b>{FX(ordCash)}</b></span>}{ordTrade>0&&<span style={{color:"#a78bfa",fontSize:9}}>Trade: <b>{FX(ordTrade)}</b></span>}</>}
                 {grp.some(i=>i.fl.includes("duplicate"))&&<span style={{color:"#f97316",fontSize:8,fontWeight:700}}>⚠ Already Imported</span>}
@@ -1203,7 +1213,7 @@ export default function App(){
               {it.personAmt!=null&&it.personAmt<it.amt&&<span style={{color:"#71717a",fontSize:9,fontFamily:"monospace",whiteSpace:"nowrap"}}>tax {FX(it.amt-it.personAmt)}</span>}
             </div>}
             <input value={it.note||""} onChange={e=>editSplit(it.id,"note",e.target.value)} placeholder="note..." style={{...is,flex:1,minWidth:60,maxWidth:140,padding:"2px 6px",fontSize:10,borderRadius:5,color:"#a1a1aa"}}/>
-            <div style={{minWidth:0,flexShrink:0}}><div style={{color:"#d4d4d8",fontSize:10,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120}}>{it.name}</div><div style={{color:"#a1a1aa",fontSize:9}}>{SD(it.date)}{it.pm&&` · ${it.pm}`}</div></div>
+            <div style={{minWidth:0,flexShrink:0}}><div style={{color:"#d4d4d8",fontSize:10,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120}}>{it.name}</div><div style={{color:"#a1a1aa",fontSize:9}}>{SD(it.date)}{it.pm&&` · ${it.pm}`}{it.staff&&!it.order&&` · 👤 ${it.staff}`}</div>{it.notes&&<div style={{color:"#71717a",fontSize:8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:160}}>📝 {it.notes}</div>}</div>
             {it.fl.map(f=>(<span key={f} style={{padding:"1px 6px",borderRadius:8,fontSize:8,fontWeight:600,background:`${FC[f]}15`,color:FC[f],border:`1px solid ${FC[f]}30`}}>{FL[f]}</span>))}
             {impCh==="square"&&<button onClick={()=>editSplits(it.id,it.splits&&it.splits.length>0?[]:[{owner:isU?"UNKNOWN":it.owner,amt:it.personAmt!=null?it.personAmt:it.amt}])} style={{padding:"2px 8px",borderRadius:4,border:`1px solid ${it.splits&&it.splits.length>0?"#a78bfa50":"#3f3f4660"}`,background:it.splits&&it.splits.length>0?"rgba(167,139,250,.18)":"transparent",color:it.splits&&it.splits.length>0?"#a78bfa":"#52525b",cursor:"pointer",fontSize:8,fontWeight:700,whiteSpace:"nowrap",flexShrink:0}}>± Split</button>}
             {delConfId===it.id?<button onClick={()=>removeImpItem(it.id)} style={{padding:"2px 8px",borderRadius:4,border:"none",background:"#ef4444",color:"#fff",cursor:"pointer",fontSize:8,fontWeight:700,flexShrink:0}}>Delete?</button>:<button onClick={()=>sDelConfId(it.id)} style={{padding:"1px 5px",borderRadius:4,border:"1px solid #ef444430",background:"transparent",color:"#52525b",cursor:"pointer",fontSize:10,lineHeight:1,flexShrink:0}}>×</button>}
@@ -1319,7 +1329,7 @@ export default function App(){
       {!poSplitOn&&<div style={{minWidth:90}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>PERSON</div>
         <select value={poP} onChange={e=>sPOP(e.target.value)} style={{...is,width:"100%",padding:"6px 8px",fontSize:12,color:CO[poP]||"#fff"}}><optgroup label="MAIN" style={{background:"#27272a"}}>{["AJAY","DEREK","SHARED","LJ"].map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup><optgroup label="CONSIGNERS" style={{background:"#27272a"}}>{PP.filter(p=>!["AJAY","DEREK","SHARED","LJ"].includes(p)).sort().map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup></select></div>}
       <div style={{minWidth:80}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>CHANNEL</div>
-        <select value={poCh} onChange={e=>sPOCh(e.target.value)} style={{...is,width:"100%",padding:"6px 8px",fontSize:11}}><option value="cash">Cash</option><option value="amex">Amex</option><option value="shopify">Shopify</option><option value="square">Square</option></select></div>
+        <select value={poCh} onChange={e=>sPOCh(e.target.value)} style={{...is,width:"100%",padding:"6px 8px",fontSize:11}}>{Object.entries(CL).map(([k,v])=>(<option key={k} value={k}>{v}</option>))}</select></div>
       <div style={{minWidth:80}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>AMOUNT</div>
         <input type="text" inputMode="decimal" value={poAmt} onChange={e=>sPOAmt(e.target.value)} placeholder="0.00" style={{...is,width:"100%",padding:"6px 8px",fontSize:12}}/></div>
       <div style={{flex:1,minWidth:100}}><div style={{color:"#a1a1aa",fontSize:9,marginBottom:3}}>NOTE</div>
@@ -1811,7 +1821,7 @@ export default function App(){
             sDD({...nd});sCD({...nc});tw(`✓ Deleted ${logSel.size} entries`);sLogSel(new Set());sLogSelMode(false);}} style={{padding:"3px 10px",borderRadius:4,border:"none",background:"#ef4444",color:"#fafafa",cursor:"pointer",fontSize:9,fontWeight:700}}>Delete {logSel.size} selected</button>}
         </div>}
         <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
-          {["all","shopify","square","cash","amex","discord"].map(k=>(<button key={k} onClick={()=>sLogCh(k)} style={{padding:"3px 8px",borderRadius:4,border:"none",background:logCh===k?"#3f3f46":"transparent",color:logCh===k?(k==="all"?"#fff":k==="discord"?"#7c3aed":CC[k]):"#444",cursor:"pointer",fontSize:9,fontWeight:600}}>{k==="all"?"All":k==="discord"?"📋 Discord":CL[k]}</button>))}
+          {["all","shopify","square","cash","amex","venmo","zelle","discord"].map(k=>(<button key={k} onClick={()=>sLogCh(k)} style={{padding:"3px 8px",borderRadius:4,border:"none",background:logCh===k?"#3f3f46":"transparent",color:logCh===k?(k==="all"?"#fff":k==="discord"?"#7c3aed":CC[k]||"#71717a"):"#444",cursor:"pointer",fontSize:9,fontWeight:600}}>{k==="all"?"All":k==="discord"?"📋 Discord":CL[k]||k}</button>))}
         </div>
         {logCh==="discord"&&filtered.length>0&&!logSelMode&&<div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8,padding:"6px 10px",borderRadius:6,border:"1px solid #7c3aed30",background:"rgba(124,58,237,.06)"}}>
           <span style={{color:"#7c3aed",fontSize:10,fontWeight:600,flex:1}}>📋 {filtered.length} Discord entries</span>
@@ -2152,6 +2162,7 @@ export default function App(){
     </SH>
     <SH id="log" icon="📋" label="UPDATE LOG">
       {[
+        {v:"1.2.1",items:["Discord parses date from message (M/D/YYYY) instead of defaulting to today","Discord shows staff name (👤 badge) and 📝 Notes on import preview","🎪 Convention Sale support in Discord import","Venmo & Zelle payment channels — tracked separately, don't affect cash/amex balances","AI export matches new finance app backend format (daily earnings, type/channel mapping)","Analytics date range defaults to Jan 1"]},
         {v:"1.2.0",items:["Consignment # field in People — assign consignment numbers per person","Square import auto-detects owners by consignment number","Manual order form stays visible during pending Square/Shopify imports","Discord order paste import — copy from Discord, edit owners & amounts, then apply","Sort log by date (newest/oldest date) in addition to entry order"]},
         {v:"1.1.0",items:["View-only PIN (0201) for read-only access","Collapsible settings dropdowns","Auto-lock after 5 minutes of inactivity","Backup restore now reloads page so all data appears","Transaction log search by dollar amount","Keyword search in log — searches all words separately, use quotes for exact match","Sort log by newest, oldest, highest $, or lowest $","Customize UI — accent color, font size, density, dark/light theme, tab position, toggle page sections"]},
         {v:"1.0.9",items:["Consigner payout with custom amount — choose how much to pay","Choose payout source — split between cash and amex accounts","Transfer between cash ↔ amex per consigner","Square imports: only assigned items apply, unassigned stay for later","Bank transactions and account balances now show decimals (.00)","Add photos to existing entries from the log","Consigners in Buy/Pull dropdown, split purchases, photo in Buy/Pull"]},
@@ -2228,71 +2239,125 @@ export default function App(){
           [...entries].sort((a,b)=>b.d.localeCompare(a.d)||b.t.localeCompare(a.t)).forEach(e=>{rows.push([e.d,e.p,e.c,e.src||"",e.io,e.a.toFixed(2),esc(e.r),esc(e.ord||""),esc(e.grp||""),e.t].join(","));});dl("log",rows.join("\n"));};
         const expAll=()=>{expTxns();expBal();expBank();expLog();};
         const expAI=()=>{
-          // Build comprehensive export for another AI/app to understand
-          const commRates={};PP.forEach(p=>{if(OWNERS.has(p))commRates[p]={type:"owner",rate:0,note:"Gets full amount (minus processing fees)"};
-            else{const cfg=COMM[p]||DEF_COMM;commRates[p]={type:"consigner",rate:cfg.rate,split:cfg.split,note:`${(cfg.rate*100).toFixed(0)}% commission to ${cfg.split==="BOTH"?"AJAY+DEREK split":cfg.split}`};}});
-          // Revenue by person (all-time) — from dd which is the AUTHORITATIVE source
+          // Build export matching new finance app backend format (FINANCIALS_ARCHITECTURE.md)
+          const TAX_RATE=0.0875;
+          const DAY_NAMES=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+          // Revenue by person (all-time) from dd — AUTHORITATIVE source
           const revByPerson={};PP.forEach(p=>{let t=0;Object.values(dd).forEach(day=>{t+=day[p]||0;});if(t>0)revByPerson[p]=Math.round(t*100)/100;});
           const ytdTotal=Math.round(Object.values(revByPerson).reduce((s,v)=>s+v,0)*100)/100;
-          // Revenue by person by month
-          const revByMonth={};Object.keys(dd).sort().forEach(d=>{const mo=d.slice(0,7);if(!revByMonth[mo])revByMonth[mo]={};PP.forEach(p=>{if(dd[d]?.[p])revByMonth[mo][p]=(revByMonth[mo][p]||0)+dd[d][p];});});
-          Object.keys(revByMonth).forEach(mo=>{Object.keys(revByMonth[mo]).forEach(p=>{revByMonth[mo][p]=Math.round(revByMonth[mo][p]*100)/100;});});
-          // Spending by person (all-time)
-          const spendByPerson={};entries.filter(e=>e.io==="OUT").forEach(e=>{spendByPerson[e.p]=(spendByPerson[e.p]||0)+e.a;});
-          Object.keys(spendByPerson).forEach(p=>{spendByPerson[p]=Math.round(spendByPerson[p]*100)/100;});
-          // Channel revenue totals
-          const revByChannel={};Object.values(cd).forEach(day=>{Object.entries(day).forEach(([c,a])=>{revByChannel[c]=(revByChannel[c]||0)+a;});});
-          Object.keys(revByChannel).forEach(c=>{revByChannel[c]=Math.round(revByChannel[c]*100)/100;});
-          // Daily revenue flattened to simple rows for easy parsing
-          const dailyRows=[];Object.keys(dd).sort().forEach(d=>{Object.entries(dd[d]).forEach(([p,a])=>{if(a>0)dailyRows.push({date:d,person:p,revenue:Math.round(a*100)/100});});});
+          const allDays=Object.keys(dd).sort();
+          const daysTracked=allDays.length;
+          // Balances in flat format matching backend overview endpoint
+          const bCash={cash_total:0},bAmex={cash_total:0},bOverall={cash_total:0,ytd:ytdTotal};
+          Object.entries(balances).forEach(([p,b])=>{const lp=p.toLowerCase();
+            if(b.cash){bCash[lp]=Math.round(b.cash*100)/100;bCash.cash_total+=b.cash;}
+            if(b.amex){bAmex[lp]=Math.round(b.amex*100)/100;bAmex.cash_total+=b.amex;}
+            if(b.cash||b.amex||b.overall){bOverall[lp]=Math.round(b.overall*100)/100;bOverall.cash_total+=b.overall;}
+          });
+          bCash.cash_total=Math.round(bCash.cash_total*100)/100;
+          bAmex.cash_total=Math.round(bAmex.cash_total*100)/100;
+          bOverall.cash_total=Math.round(bOverall.cash_total*100)/100;
+          // Owner totals from dd revenue
+          const ownerTotals={ajay:0,derek:0,shared:0,lj:0,total:0,consignment:0};
+          Object.entries(revByPerson).forEach(([p,v])=>{const lp=p.toLowerCase();
+            if(lp in ownerTotals)ownerTotals[lp]=Math.round(v*100)/100;
+            if(!OWNERS.has(p))ownerTotals.consignment+=v;
+            ownerTotals.total+=v;});
+          ownerTotals.total=Math.round(ownerTotals.total*100)/100;
+          ownerTotals.consignment=Math.round(ownerTotals.consignment*100)/100;
+          // Daily averages
+          const dailyAvg={ajay:0,derek:0,shared:0,lj:0};
+          if(daysTracked>0){Object.keys(dailyAvg).forEach(k=>{dailyAvg[k]=Math.round((ownerTotals[k]/daysTracked)*100)/100;});}
+          // Spending/expenses by person
+          const expBreakdown={};let expTotal=0;
+          entries.filter(e=>e.io==="OUT").forEach(e=>{const lp=e.p.toLowerCase();expBreakdown[lp]=(expBreakdown[lp]||0)+e.a;expTotal+=e.a;});
+          Object.keys(expBreakdown).forEach(k=>{expBreakdown[k]=Math.round(expBreakdown[k]*100)/100;});
+          expTotal=Math.round(expTotal*100)/100;
+          // Total sales tax from revenue
+          const totalSalesTax=Math.round(ytdTotal*TAX_RATE*100)/100;
+          // Consignment fees
+          const consFees={cash:0,amex:0,overall:0};
+          entries.filter(e=>e.io==="CONSIGNMENT"&&!OWNERS.has(e.p)).forEach(e=>{
+            const cfg=COMM[e.p]||DEF_COMM;const fee=Math.round(e.a*cfg.rate*100)/100;
+            if(e.c==="cash")consFees.cash+=fee;else consFees.amex+=fee;consFees.overall+=fee;});
+          consFees.cash=Math.round(consFees.cash*100)/100;consFees.amex=Math.round(consFees.amex*100)/100;consFees.overall=Math.round(consFees.overall*100)/100;
+          // Daily earnings rows matching backend daily-earnings format
+          const dailyEarnings=[];
+          allDays.forEach(d=>{
+            const dayPerson=dd[d]||{};const dayChan=cd[d]||{};
+            const dt=new Date(d+"T12:00:00");const dayName=DAY_NAMES[dt.getDay()];
+            let overall=0,consignmentTotal=0;
+            const row={date:d,day_name:dayName,overall:0,
+              shopify:Math.round((dayChan.shopify||0)*100)/100,
+              square:Math.round((dayChan.square||0)*100)/100,
+              custom_cash:Math.round((dayChan.cash||0)*100)/100,
+              custom_amex:Math.round((dayChan.amex||0)*100)/100,
+              digital:0,cash_total:Math.round((dayChan.cash||0)*100)/100};
+            PP.forEach(p=>{const a=dayPerson[p]||0;if(a>0){row[p.toLowerCase()]=Math.round(a*100)/100;overall+=a;
+              if(!OWNERS.has(p))consignmentTotal+=a;}});
+            row.overall=Math.round(overall*100)/100;
+            row.consignment_total=Math.round(consignmentTotal*100)/100;
+            row.sales_tax=Math.round(overall*TAX_RATE*100)/100;
+            row.trade_credit=0;
+            dailyEarnings.push(row);
+          });
+          // Type mapping: export -> DB format
+          const typeMap={"IN":"sale","OUT":"expense","CONSIGNMENT":"consignment_sale","XFER_IN":"cash_transfer","XFER_OUT":"cash_transfer","REFUND":"refund","PYOUT":"payout"};
+          const dirMap={"IN":"IN","OUT":"OUT","CONSIGNMENT":"IN","XFER_IN":"IN","XFER_OUT":"OUT","REFUND":"OUT","PYOUT":"OUT"};
+          const chanMap={"amex":"card","cash":"cash","shopify":"shopify","square":"square"};
+          // Commission rates for business section
+          const commRates={};PP.forEach(p=>{const cfg=COMM[p]||DEF_COMM;commRates[p]={rate:OWNERS.has(p)?0:cfg.rate};});
           const data={
-            _README:"Unboxed TCG Dashboard — Full Data Export. IMPORTANT: Use 'ytdRevenue' and 'dailyRevenueRows' for revenue totals — NOT 'transactions'. The transactions array only contains entries added through the app. Historical sales data (from Shopify) is in the daily revenue data. The YTD total below is the CORRECT, AUTHORITATIVE total.",
             exportedAt:new Date().toISOString(),
             exportDate:new Date().toISOString().slice(0,10),
-            ytdRevenue:{
-              _note:"THIS IS THE CORRECT YTD REVENUE. Use these numbers, not transaction sums. Revenue comes from two sources: (1) historical Shopify data baked into the app and (2) transaction entries added through the app. This section combines both.",
-              total:ytdTotal,
-              byPerson:revByPerson,
-              byMonth:revByMonth,
-              byChannel:revByChannel
-            },
+            dateRange:{start:"2026-01-01",end:new Date().toISOString().slice(0,10)},
             business:{
-              name:"Unboxed TCG",
-              description:"Trading card game store with multiple owners and consigners",
               owners:["AJAY","DEREK","SHARED"],
-              ownersNote:"AJAY and DEREK are co-owners. SHARED is the joint business account.",
               allPeople:PP,
-              commissionRates:commRates,
-              commissionNote:"Consigners sell items through the store. The store keeps a commission and the consigner gets the rest. Commission is split between owners based on the 'split' field."
+              commissionRates:commRates
+            },
+            overview:{
+              balances:{cash:bCash,amex:bAmex,overall:bOverall},
+              ytd:ytdTotal,
+              expenses:{breakdown:expBreakdown,total:expTotal},
+              sales_tax:totalSalesTax,
+              owner_totals:ownerTotals,
+              daily_avg:dailyAvg,
+              consignment_fees:consFees,
+              days_tracked:daysTracked
+            },
+            analytics:{
+              revenueByPerson:revByPerson,
+              totalRevenue:ytdTotal,
+              totalSpending:expTotal
             },
             balances:{
-              _note:"Current account balances per person. Cash = physical cash. Amex = card/digital. Overall = cash + amex.",
-              byPerson:Object.fromEntries(Object.entries(balances).filter(([,b])=>b.cash||b.amex||b.overall).sort(([,a],[,b])=>b.overall-a.overall).map(([p,b])=>[p,{cash:Math.round(b.cash*100)/100,amex:Math.round(b.amex*100)/100,overall:Math.round(b.overall*100)/100}]))
-            },
-            spending:{
-              _note:"Total spending (purchases/expenses) by person from transaction entries.",
-              total:Math.round(Object.values(spendByPerson).reduce((s,v)=>s+v,0)*100)/100,
-              byPerson:spendByPerson
-            },
-            dailyRevenueRows:{
-              _note:"AUTHORITATIVE daily revenue data flattened into rows. Each row = one person's revenue on one day. Sum all rows to get YTD. This includes ALL revenue (historical + app entries).",
-              totalRows:dailyRows.length,
-              rows:dailyRows
+              byPerson:Object.fromEntries(Object.entries(balances).filter(([,b])=>b.cash||b.amex||b.overall).map(([p,b])=>[p,{cash:Math.round(b.cash*100)/100,amex:Math.round(b.amex*100)/100,overall:Math.round(b.overall*100)/100}]))
             },
             transactions:{
-              _note:"WARNING: These are ONLY entries added through the app (imports, manual orders, transfers). They do NOT include historical Shopify sales. Do NOT sum these for YTD revenue — use 'ytdRevenue.total' instead. Fields: id, date, person, channel (cash/amex/shopify/square), amount (always positive), type (IN=sale, OUT=expense, CONSIGNMENT=consign sale, XFER_IN/XFER_OUT=transfer, REFUND=refund), description, orderRef, groupId, source (discord/square/shopify), timestamp",
+              _note:"All transactions in date range",
               count:entries.length,
-              entries:entries.map(e=>({id:e.id,date:e.d,person:e.p,channel:e.c,amount:e.a,type:e.io,description:e.r||"",orderRef:e.ord||"",groupId:e.grp||"",source:e.src||"",timestamp:e.t}))
+              entries:entries.filter(e=>!e.fl||!e.fl.includes("tax")).map(e=>({
+                id:e.id,date:e.d,person:e.p,
+                channel:chanMap[e.c]||e.c,
+                amount:e.a,
+                type:typeMap[e.io]||"sale",
+                direction:dirMap[e.io]||"IN",
+                description:e.r||"",orderRef:e.ord||"",groupId:e.grp||"",
+                source:e.src?"imported":"manual",
+                timestamp:e.t
+              }))
             },
             bankTransactions:{
-              _note:"Bank account transactions (deposits, withdrawals).",
+              _note:"Bank deposits/withdrawals",
               count:bankTxns.length,
               entries:bankTxns.map(t=>({date:t.d,account:t.acct,type:t.type,amount:t.amt,note:t.note||"",timestamp:t.t}))
             },
-            peopleInfo:{
-              _note:"Contact info and metadata for each person. May include phone, email, address, venmo, consignId (consignment number), notes.",
-              data:pplInfo
-            }
+            dailyEarnings,
+            dailyRevenue:{data:Object.fromEntries(allDays.map(d=>[d,{...dd[d]}]))},
+            channelRevenue:{data:Object.fromEntries(allDays.map(d=>[d,{...(cd[d]||{})}]))},
+            expenses:expBreakdown,
+            safe:{deposits:[],safe_balance:0}
           };
           const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`unboxed-full-export-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(url);
           tw("✓ Full export downloaded");
