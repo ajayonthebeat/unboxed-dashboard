@@ -1399,44 +1399,58 @@ export default function App(){
               </div></div>);})
         })()}</div></div>
       {(()=>{const convItems=filtImp.filter(it=>it.saleType==="convention");if(!convItems.length)return null;
-        const byChannel={};convItems.forEach(it=>{const ch=it.ch||impCh;if(!byChannel[ch])byChannel[ch]=[];byChannel[ch].push(it);});
         const convTotal=convItems.reduce((s,i)=>s+i.amt,0);
+        const ordGrp={};convItems.forEach(it=>{const o=it.order||`_${it.id}`;if(!ordGrp[o])ordGrp[o]=[];ordGrp[o].push(it);});
+        const byChTotals={};convItems.forEach(it=>{const ch=it.ch||impCh;byChTotals[ch]=(byChTotals[ch]||0)+it.amt;});
         return(<div style={{...cr,padding:0,overflow:"hidden",marginTop:10,borderColor:"#f9731640"}}>
-          <div style={{padding:"10px 14px",background:"rgba(249,115,22,.08)",borderBottom:"1px solid #f9731630",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{color:"#f97316",fontSize:13,fontWeight:800}}>🎪 Convention Sales</span>
-            <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{color:"#71717a",fontSize:9}}>{convItems.length} sale{convItems.length>1?"s":""}</span><span style={{color:"#f97316",fontFamily:"monospace",fontSize:14,fontWeight:800}}>{FX(convTotal)}</span></div>
+          <div style={{padding:"10px 14px",background:"rgba(249,115,22,.08)",borderBottom:"1px solid #f9731630"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{color:"#f97316",fontSize:13,fontWeight:800}}>🎪 Convention Sales</span>
+              <div style={{display:"flex",alignItems:"center",gap:10}}><span style={{color:"#71717a",fontSize:9}}>{convItems.length} sale{convItems.length>1?"s":""} · {Object.keys(ordGrp).length} order{Object.keys(ordGrp).length>1?"s":""}</span><span style={{color:"#f97316",fontFamily:"monospace",fontSize:16,fontWeight:800}}>{FX(convTotal)}</span></div>
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:6,flexWrap:"wrap"}}>{Object.entries(byChTotals).map(([ch,amt])=>{const chC=CC[ch]||"#71717a";return(<span key={ch} style={{fontSize:9,fontWeight:700,padding:"2px 8px",borderRadius:4,border:`1px solid ${chC}40`,background:`${chC}10`,color:chC}}>{CL[ch]||ch}: {FX(amt)}</span>);})}</div>
           </div>
-          {Object.entries(byChannel).sort((a,b)=>b[1].reduce((s,i)=>s+i.amt,0)-a[1].reduce((s,i)=>s+i.amt,0)).map(([ch,items])=>{
-            const chC=CC[ch]||"#71717a";const chL=CL[ch]||ch;const chTotal=items.reduce((s,i)=>s+i.amt,0);
-            return(<div key={ch}>
-              <div style={{padding:"8px 14px",background:`${chC}0a`,borderBottom:`1px solid ${chC}20`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:chC}}/><span style={{fontSize:11,fontWeight:700,color:chC}}>{chL}</span></div>
-                <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{color:"#71717a",fontSize:9}}>{items.length} sale{items.length>1?"s":""}</span><span style={{color:chC,fontFamily:"monospace",fontSize:12,fontWeight:800}}>{FX(chTotal)}</span></div>
-              </div>
-              {items.map(it=>{const isU=it.owner==="UNKNOWN";const itCh=it.ch||impCh;return(
-                <div key={it.id} style={{padding:"8px 14px",borderBottom:"1px solid rgba(63,63,70,.3)",borderLeft:"3px solid #f97316",background:isU?"rgba(239,68,68,.03)":"transparent"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                    {!(it.splits&&it.splits.length>0)&&<select value={it.owner} onChange={e=>editOwner(it.id,e.target.value)} style={{background:isU?"rgba(239,68,68,.15)":"rgba(63,63,70,.6)",border:`1px solid ${isU?"#ef444440":"#3f3f46"}`,borderRadius:6,padding:"3px 6px",color:isU?"#ef4444":CO[it.owner]||"#ccc",fontSize:10,fontWeight:600,cursor:"pointer",outline:"none",minWidth:75}}>
-                      {isU&&<option value="UNKNOWN">⚠ ???</option>}<optgroup label="MAIN" style={{background:"#27272a"}}>{["AJAY","DEREK","SHARED","LJ"].map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup><optgroup label="CONSIGNERS" style={{background:"#27272a"}}>{PP.filter(p=>!["AJAY","DEREK","SHARED","LJ"].includes(p)).sort().map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup></select>}
-                    <input type="number" value={it.amt} onChange={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v>=0)editSplit(it.id,"amt",v);}} style={{...is,width:62,padding:"2px 6px",fontSize:12,fontWeight:700,color:"#22c55e",fontFamily:"monospace",borderRadius:5,textAlign:"right"}}/>
-                    <select value={itCh} onChange={e=>editSplit(it.id,"ch",e.target.value)} style={{background:`${CC[itCh]||"#555"}15`,border:`1px solid ${CC[itCh]||"#555"}40`,borderRadius:6,padding:"3px 6px",color:CC[itCh]||"#888",fontSize:9,fontWeight:700,cursor:"pointer",outline:"none"}}>
-                      {[["cash","Cash"],["amex","Amex"],["venmo","Venmo"],["zelle","Zelle"]].map(([v,l])=>(<option key={v} value={v} style={{background:"#27272a",color:CC[v]}}>{l}</option>))}
+          <div style={{maxHeight:380,overflowY:"auto"}}>
+          {convItems.map((it,idx)=>{const isU=it.owner==="UNKNOWN";const itCh=it.ch||impCh;
+            const prevOrd=idx>0?convItems[idx-1].order:null;const newOrd=it.order!==prevOrd;
+            const grp=ordGrp[it.order||`_${it.id}`]||[];
+            const ordTotal=grp.reduce((s,i)=>s+i.amt,0);
+            return(<div key={it.id}>
+              {newOrd&&it.order&&<div style={{padding:"6px 14px",background:"rgba(249,115,22,.06)",borderTop:idx>0?"2px solid #f9731540":"none",marginTop:idx>0?4:0,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",borderLeft:"3px solid #f97316"}}>
+                <span style={{color:"#f97316",fontSize:12,fontWeight:800,fontFamily:"monospace"}}>{it.order}</span>
+                <span style={{color:"#71717a",fontSize:9}}>{grp.length} item{grp.length>1?"s":""}</span>
+                <span style={{color:"#fafafa",fontSize:11,fontWeight:700,fontFamily:"monospace"}}>{FX(ordTotal)}</span>
+                {it.staff&&<span style={{fontSize:8,fontWeight:600,padding:"1px 6px",borderRadius:4,border:"1px solid #a78bfa30",background:"rgba(167,139,250,.08)",color:"#a78bfa"}}>👤 {it.staff}</span>}
+                {(()=>{const chs=[...new Set(grp.map(i=>i.ch||impCh))];return chs.map(ch=>{const chC=CC[ch]||"#71717a";return <span key={ch} style={{fontSize:8,fontWeight:700,padding:"1px 6px",borderRadius:4,border:`1px solid ${chC}40`,background:`${chC}10`,color:chC}}>→ {CL[ch]||ch}</span>;});})()}
+                <button onClick={()=>{sII(prev=>{if(!prev)return prev;const base=Math.max(...prev.map(i=>i.id))+1;const ref=grp[0]||it;return[...prev,{id:base,date:ref.date,name:"New Item",amt:0,owner:"UNKNOWN",fl:["unknown"],order:it.order,device:"",ch:ref.ch||impCh,staff:ref.staff||"",notes:"",saleType:"convention"}];});}} style={{marginLeft:"auto",padding:"2px 8px",borderRadius:4,border:"1px solid #f9731640",background:"rgba(249,115,22,.08)",color:"#f97316",cursor:"pointer",fontSize:8,fontWeight:700,flexShrink:0}}>+ Person</button>
+                <button onClick={()=>sDelConfId(sDelConfId===it.order?null:it.order)} style={{padding:"1px 6px",borderRadius:4,border:"1px solid #ef444430",background:delConfId===it.order?"rgba(239,68,68,.15)":"transparent",color:"#ef4444",cursor:"pointer",fontSize:9,fontWeight:600}}>×</button>
+                {delConfId===it.order&&<button onClick={()=>removeImpOrder(it.order)} style={{padding:"2px 8px",borderRadius:4,border:"none",background:"#ef4444",color:"#fff",cursor:"pointer",fontSize:9,fontWeight:700}}>Delete Order?</button>}
+              </div>}
+              {newOrd&&!it.order&&idx>0&&<div style={{borderTop:"2px solid #f9731540",marginTop:4}}/>}
+              <div style={{padding:"8px 14px",borderBottom:"1px solid rgba(63,63,70,.3)",borderLeft:"3px solid #f97316",background:isU?"rgba(239,68,68,.03)":"transparent"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  {!(it.splits&&it.splits.length>0)&&<select value={it.owner} onChange={e=>editOwner(it.id,e.target.value)} style={{background:isU?"rgba(239,68,68,.15)":"rgba(63,63,70,.6)",border:`1px solid ${isU?"#ef444440":"#3f3f46"}`,borderRadius:6,padding:"3px 6px",color:isU?"#ef4444":CO[it.owner]||"#ccc",fontSize:10,fontWeight:600,cursor:"pointer",outline:"none",minWidth:75}}>
+                    {isU&&<option value="UNKNOWN">⚠ ???</option>}<optgroup label="MAIN" style={{background:"#27272a"}}>{["AJAY","DEREK","SHARED","LJ"].map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup><optgroup label="CONSIGNERS" style={{background:"#27272a"}}>{PP.filter(p=>!["AJAY","DEREK","SHARED","LJ"].includes(p)).sort().map(p=>(<option key={p} value={p} style={{color:CO[p],background:"#27272a"}}>{p}</option>))}</optgroup></select>}
+                  <input type="number" value={it.amt} onChange={e=>{const v=parseFloat(e.target.value);if(!isNaN(v)&&v>=0)editSplit(it.id,"amt",v);}} style={{...is,width:62,padding:"2px 6px",fontSize:12,fontWeight:700,color:"#22c55e",fontFamily:"monospace",borderRadius:5,textAlign:"right"}}/>
+                  <select value={itCh} onChange={e=>editSplit(it.id,"ch",e.target.value)} style={{background:`${CC[itCh]||"#555"}15`,border:`1px solid ${CC[itCh]||"#555"}40`,borderRadius:6,padding:"3px 6px",color:CC[itCh]||"#888",fontSize:9,fontWeight:700,cursor:"pointer",outline:"none"}}>
+                    {[["cash","Cash"],["amex","Amex"],["venmo","Venmo"],["zelle","Zelle"]].map(([v,l])=>(<option key={v} value={v} style={{background:"#27272a",color:CC[v]}}>{l}</option>))}
+                  </select>
+                  {(itCh==="venmo"||itCh==="zelle")&&<div style={{display:"flex",alignItems:"center",gap:3}}>
+                    <span style={{color:CC[itCh],fontSize:8,fontWeight:600}}>rcvd by:</span>
+                    <select value={it.rcvdBy||""} onChange={e=>editSplit(it.id,"rcvdBy",e.target.value)} style={{background:"rgba(63,63,70,.6)",border:"1px solid #3f3f46",borderRadius:5,padding:"2px 5px",color:it.rcvdBy?CO[it.rcvdBy]||"#ccc":"#71717a",fontSize:9,fontWeight:600,cursor:"pointer",outline:"none"}}>
+                      <option value="" style={{background:"#27272a",color:"#71717a"}}>Select...</option>
+                      {["AJAY","DEREK","SHARED","LJ"].map(p=>(<option key={p} value={p} style={{background:"#27272a",color:CO[p]}}>{p}</option>))}
                     </select>
-                    {(itCh==="venmo"||itCh==="zelle")&&<div style={{display:"flex",alignItems:"center",gap:3}}>
-                      <span style={{color:CC[itCh],fontSize:8,fontWeight:600}}>rcvd by:</span>
-                      <select value={it.rcvdBy||""} onChange={e=>editSplit(it.id,"rcvdBy",e.target.value)} style={{background:"rgba(63,63,70,.6)",border:"1px solid #3f3f46",borderRadius:5,padding:"2px 5px",color:it.rcvdBy?CO[it.rcvdBy]||"#ccc":"#71717a",fontSize:9,fontWeight:600,cursor:"pointer",outline:"none"}}>
-                        <option value="" style={{background:"#27272a",color:"#71717a"}}>Select...</option>
-                        {["AJAY","DEREK","SHARED","LJ"].map(p=>(<option key={p} value={p} style={{background:"#27272a",color:CO[p]}}>{p}</option>))}
-                      </select>
-                    </div>}
-                    <input value={it.note||""} onChange={e=>editSplit(it.id,"note",e.target.value)} placeholder="note..." style={{...is,flex:1,minWidth:50,maxWidth:120,padding:"2px 6px",fontSize:10,borderRadius:5,color:"#a1a1aa"}}/>
-                    <div style={{minWidth:0,flex:1}}><div style={{color:"#d4d4d8",fontSize:10,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120}}>{it.name}</div><div style={{color:"#a1a1aa",fontSize:9}}>{SD(it.date)}{it.staff&&` · 👤 ${it.staff}`}</div>{it.notes&&<div style={{color:"#71717a",fontSize:8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:140}}>📝 {it.notes}</div>}</div>
-                    {it.fl.map(f=>(<span key={f} style={{padding:"1px 6px",borderRadius:8,fontSize:8,fontWeight:600,background:`${FC[f]}15`,color:FC[f],border:`1px solid ${FC[f]}30`}}>{FL[f]}</span>))}
-                    <button onClick={()=>editSplit(it.id,"saleType","")} title="Move to Regular" style={{padding:"2px 8px",borderRadius:4,border:"1px solid #3f3f46",background:"transparent",color:"#a1a1aa",cursor:"pointer",fontSize:8,fontWeight:600,flexShrink:0}}>↩ Regular</button>
-                    {delConfId===it.id?<button onClick={()=>removeImpItem(it.id)} style={{padding:"2px 8px",borderRadius:4,border:"none",background:"#ef4444",color:"#fff",cursor:"pointer",fontSize:8,fontWeight:700,flexShrink:0}}>Delete?</button>:<button onClick={()=>sDelConfId(it.id)} style={{padding:"1px 5px",borderRadius:4,border:"1px solid #ef444430",background:"transparent",color:"#52525b",cursor:"pointer",fontSize:10,lineHeight:1,flexShrink:0}}>×</button>}
-                  </div>
-                </div>);})}
+                  </div>}
+                  <input value={it.note||""} onChange={e=>editSplit(it.id,"note",e.target.value)} placeholder="note..." style={{...is,flex:1,minWidth:50,maxWidth:120,padding:"2px 6px",fontSize:10,borderRadius:5,color:"#a1a1aa"}}/>
+                  <div style={{minWidth:0,flex:1}}><div style={{color:"#d4d4d8",fontSize:10,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:120}}>{it.name}</div><div style={{color:"#a1a1aa",fontSize:9}}>{SD(it.date)}{it.staff&&` · 👤 ${it.staff}`}</div>{it.notes&&<div style={{color:"#71717a",fontSize:8,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:140}}>📝 {it.notes}</div>}</div>
+                  {it.fl.map(f=>(<span key={f} style={{padding:"1px 6px",borderRadius:8,fontSize:8,fontWeight:600,background:`${FC[f]}15`,color:FC[f],border:`1px solid ${FC[f]}30`}}>{FL[f]}</span>))}
+                  <button onClick={()=>editSplit(it.id,"saleType","")} title="Move to Regular" style={{padding:"2px 8px",borderRadius:4,border:"1px solid #3f3f46",background:"transparent",color:"#a1a1aa",cursor:"pointer",fontSize:8,fontWeight:600,flexShrink:0}}>↩ Regular</button>
+                  {delConfId===it.id?<button onClick={()=>removeImpItem(it.id)} style={{padding:"2px 8px",borderRadius:4,border:"none",background:"#ef4444",color:"#fff",cursor:"pointer",fontSize:8,fontWeight:700,flexShrink:0}}>Delete?</button>:<button onClick={()=>sDelConfId(it.id)} style={{padding:"1px 5px",borderRadius:4,border:"1px solid #ef444430",background:"transparent",color:"#52525b",cursor:"pointer",fontSize:10,lineHeight:1,flexShrink:0}}>×</button>}
+                </div>
+              </div>
             </div>);})}
+          </div>
         </div>);})()}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,padding:"8px 14px",background:"rgba(63,63,70,.3)",borderRadius:8,flexWrap:"wrap",gap:6}}>
         <span style={{color:impStats.unk.length?"#ef4444":"#10b981",fontSize:11}}>{impStats.unk.length?`${impStats.unk.length} unknown → skipped`:"✓ All assigned"}</span>
