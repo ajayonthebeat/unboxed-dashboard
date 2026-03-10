@@ -71,7 +71,8 @@ function parseSquareCSV(t,pplInfo){const{data:rows}=Papa.parse(t,{header:true,sk
     items.push({id:items.length,date,name:n||"Custom Amount",amt,owner,fl,device:dev,order:""});}
   return{items,channel:"square"};}
 function parseDiscord(text){const blocks=text.split(/(?=🛒|🤝|🎪)/);const allItems=[];let mainCh="cash";const today=new Date().toISOString().slice(0,10);
-  for(const block of blocks){if(!block.trim())continue;const lines=block.split('\n').map(l=>l.trim());let channel="cash";let txnId="";let staff="";let notes="";let date=today;
+  for(const block of blocks){if(!block.trim())continue;const lines=block.split('\n').map(l=>l.trim());let channel="cash";let txnId="";let staff="";let notes="";let date=today;let saleType="";
+    if(block.includes("🎪"))saleType="convention";else if(block.includes("🤝"))saleType="trade";else if(block.includes("🛒"))saleType="store";
     // Parse date from "M/D/YYYY" pattern anywhere in block
     const dateM=block.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if(dateM){const mm=dateM[1].padStart(2,"0");const dd=dateM[2].padStart(2,"0");const yyyy=dateM[3];date=`${yyyy}-${mm}-${dd}`;}
@@ -86,9 +87,9 @@ function parseDiscord(text){const blocks=text.split(/(?=🛒|🤝|🎪)/);const 
       const pmM=l.match(/^payment[:\s]+(.+)/i);if(pmM){const pm=pmM[1].toLowerCase().trim();if(pm.includes("square"))channel="square";else if(pm.includes("amex"))channel="amex";else if(pm.includes("shopify"))channel="shopify";else if(pm.includes("venmo"))channel="venmo";else if(pm.includes("zelle"))channel="zelle";else channel="cash";}
       const im=l.match(/^[•·\-]\s*(.+?)\s*(?:—|=)\s*\$([0-9,.]+)\s*\((\w+)\)\s*$/);
       if(im){const name=im[1].split('—')[0].trim().substring(0,80);const amt=parseFloat(im[2].replace(/,/g,""))||0;const ow=im[3].toUpperCase();const owner=PP.includes(ow)?ow:"UNKNOWN";
-        if(amt>0)allItems.push({id:allItems.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:txnId,device:"",ch:channel,staff,notes});}}
+        if(amt>0)allItems.push({id:allItems.length,date,name,amt,owner,fl:owner==="UNKNOWN"?["unknown"]:[],order:txnId,device:"",ch:channel,staff,notes,saleType});}}
     const txM=block.match(/\+\s*\$([0-9,.]+)\s*tax/i);
-    if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)allItems.push({id:allItems.length,date,name:"Tax",amt:tax,owner:"TAX",fl:["tax"],order:txnId,device:"",ch:channel,staff,notes});}
+    if(txM){const tax=parseFloat(txM[1].replace(/,/g,""))||0;if(tax>0)allItems.push({id:allItems.length,date,name:"Tax",amt:tax,owner:"TAX",fl:["tax"],order:txnId,device:"",ch:channel,staff,notes,saleType});}
     if(allItems.length>0)mainCh=channel;}
   return{items:allItems,channel:mainCh};}
 const TT=({active,payload,label})=>{if(!active||!payload)return null;const it=payload.filter(p=>p.value>0&&p.dataKey!=="_t"&&p.dataKey!=="_total").sort((a,b)=>b.value-a.value);const tot=it.reduce((s,p)=>s+p.value,0);
@@ -1191,8 +1192,9 @@ export default function App(){
             const grp=ordGrp[it.order||`_${it.id}`]||[];
             const ordTotal=grp.reduce((s,i)=>s+i.amt,0);const ordShop=grp.reduce((s,i)=>s+(i.shopAmt!=null?i.shopAmt:(i.fl.includes("split_pay")?Math.max(0,i.amt-(i.cashAmt||0)-(i.tradeAmt||0)):i.amt)),0);const ordCash=grp.reduce((s,i)=>s+(i.cashAmt||0),0);const ordTrade=grp.reduce((s,i)=>s+(i.tradeAmt||0),0);const hasSplitInGrp=grp.some(i=>i.fl.includes("split_pay"));
             return(<div key={it.id}>
-              {newOrd&&it.order&&<div style={{padding:"6px 14px",background:"rgba(6,182,212,.04)",borderTop:idx>0?"2px solid #52525b":"none",marginTop:idx>0?4:0,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                <span style={{color:"#06b6d4",fontSize:12,fontWeight:800,fontFamily:"monospace"}}>{it.order}</span><span style={{color:"#71717a",fontSize:9}}>{grp.length} item{grp.length>1?"s":""}</span><span style={{color:"#fafafa",fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{FX(ordTotal)}</span>
+              {newOrd&&it.order&&<div style={{padding:"6px 14px",background:it.saleType==="convention"?"rgba(249,115,22,.08)":"rgba(6,182,212,.04)",borderTop:idx>0?`2px solid ${it.saleType==="convention"?"#f9731540":"#52525b"}`:"none",marginTop:idx>0?4:0,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",borderLeft:it.saleType==="convention"?"3px solid #f97316":"none"}}>
+                {it.saleType==="convention"&&<span style={{fontSize:9,fontWeight:700,padding:"1px 7px",borderRadius:4,border:"1px solid #f9731640",background:"rgba(249,115,22,.15)",color:"#f97316"}}>🎪 Convention</span>}
+                <span style={{color:it.saleType==="convention"?"#f97316":"#06b6d4",fontSize:12,fontWeight:800,fontFamily:"monospace"}}>{it.order}</span><span style={{color:"#71717a",fontSize:9}}>{grp.length} item{grp.length>1?"s":""}</span><span style={{color:"#fafafa",fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{FX(ordTotal)}</span>
                 {it.staff&&<span style={{fontSize:8,fontWeight:600,padding:"1px 6px",borderRadius:4,border:"1px solid #a78bfa30",background:"rgba(167,139,250,.08)",color:"#a78bfa"}}>👤 {it.staff}</span>}
                 {(()=>{const ch=grp[0]?.ch||impCh;const chL=CL[ch]||ch;const chC=CC[ch]||"#71717a";return <span style={{fontSize:8,fontWeight:700,padding:"1px 6px",borderRadius:4,border:`1px solid ${chC}40`,background:`${chC}10`,color:chC}}>→ {chL}</span>;})()}
                 {hasSplitInGrp&&<><span style={{color:"#96bf48",fontSize:9}}>Shop: <b>{FX(ordShop)}</b></span>{ordCash>0&&<span style={{color:AC,fontSize:9}}>Cash: <b>{FX(ordCash)}</b></span>}{ordTrade>0&&<span style={{color:"#a78bfa",fontSize:9}}>Trade: <b>{FX(ordTrade)}</b></span>}</>}
