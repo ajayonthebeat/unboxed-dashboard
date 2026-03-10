@@ -24,7 +24,7 @@ const CID={"0001":"DEREK","0002":"AJAY","0012":"SHARED","0063":"LJ","0003":"DERE
 
 const PP=["DEREK","AJAY","SHARED","LJ","ALEX","JANELY","EVAN","MARIANNA","ARTURO","DYLAN","CARTER","NESHA","HANNAH","BLUM","PATTY","MYKA"];
 const CO={"DEREK":"#3b82f6","AJAY":"#f59e0b","SHARED":"#10b981","LJ":"#ef4444","ALEX":"#a78bfa","JANELY":"#ec4899","EVAN":"#06b6d4","MARIANNA":"#f97316","ARTURO":"#84cc16","DYLAN":"#818cf8","CARTER":"#14b8a6","NESHA":"#fb7185","HANNAH":"#c084fc","BLUM":"#78716c","PATTY":"#f472b6","MYKA":"#818cf8","GUEST":"#78716c"};
-const CC={"shopify":"#96bf48","square":"#555d63","cash":"#22c55e","amex":"#3b82f6","venmo":"#008CFF","zelle":"#6D1ED4"};
+const CC={"shopify":"#96bf48","square":"#555d63","cash":"#22c55e","amex":"#3b82f6","venmo":"#008CFF","zelle":"#6D1ED4","unboxed":"#f97316"};
 const CL={"shopify":"Shopify","square":"Square","cash":"Cash","amex":"Amex","venmo":"Venmo","zelle":"Zelle"};
 const CSG={"JC":"JANELY","EVD":"EVAN","DG":"DYLAN","DC":"CARTER","MR":"MARIANNA"};
 const DM={"JANELY":"JANELY","DEREKS 16":"DEREK","KINGLY 16":"DEREK","PATRICIA 14":"SHARED","VEROS IPHONE":"AJAY"};
@@ -62,6 +62,18 @@ function parseShopifyCSV(t){const{data:rows}=Papa.parse(t,{header:true,skipEmpty
     if(o.hasSplitPay)it.fl.push("split_pay");
     if(o.refunded&&!it.fl.includes("refunded"))it.fl.push("refunded");}
   return{items,channel:"shopify"};}
+function parseUnboxedCSV(t){const{data:rows}=Papa.parse(t,{header:true,skipEmptyLines:true});const items=[];
+  for(const r of rows){const raw=r["Date"];if(!raw)continue;
+    const amt=parseFloat(String(r["Total"]||"0").replace(/[$,]/g,""))||0;if(amt<=0)continue;
+    const ts=raw;const date=raw.slice(0,10);
+    const payment=(r["Payment"]||"cash").toLowerCase().trim();
+    const ch=payment.includes("square")?"square":payment.includes("amex")?"amex":payment.includes("venmo")?"venmo":payment.includes("zelle")?"zelle":"cash";
+    const staff=(r["Staff"]||"").trim();const notes=(r["Notes"]||"").trim();
+    const source=(r["Source"]||"").trim();const txnId=r["ID"]||"";const itemCount=parseInt(r["Items"])||1;
+    const saleType=source==="private"?"private":"pos";
+    const name=notes?`${notes}`:`Sale #${txnId}`;
+    items.push({id:items.length,date,name,amt,owner:"UNKNOWN",fl:["unknown"],order:`UB-${txnId}`,device:"",ch,staff,notes,saleType,source,itemCount,timestamp:ts});}
+  return{items,channel:items[0]?.ch||"square"};}
 function parseSquareCSV(t,pplInfo){const{data:rows}=Papa.parse(t,{header:true,skipEmptyLines:true});const items=[];
   for(const r of rows){const date=r["Date"];if(!date)continue;
     const amt=parseFloat(String(r["Net Sales"]||"0").replace(/[$,]/g,""))||0;if(amt<=0)continue;
@@ -352,7 +364,7 @@ export default function App(){
   const flagDupes=(items)=>{const existOrd=new Set(entries.filter(e=>e.ord).map(e=>e.ord));
     return items.map(it=>it.order&&existOrd.has(it.order)?{...it,fl:[...it.fl,"duplicate"]}:it);};
   const handleFile=(e,type)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();
-    reader.onload=ev=>{const r=type==="shopify"?parseShopifyCSV(ev.target.result):parseSquareCSV(ev.target.result,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");sImpSrc(type);sSEC("manual");};reader.readAsText(file);e.target.value="";};
+    reader.onload=ev=>{const txt=ev.target.result;const r=type==="shopify"?parseShopifyCSV(txt):type==="unboxed"?parseUnboxedCSV(txt):parseSquareCSV(txt,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");sImpSrc(type);sSEC("manual");};reader.readAsText(file);e.target.value="";};
   const editOwner=(id,nw)=>{sII(prev=>prev.map(it=>it.id===id?{...it,owner:nw,fl:it.fl.filter(f=>f!=="unknown")}:it));};
   const editSplit=(id,field,val)=>{sII(prev=>prev.map(it=>it.id===id?{...it,[field]:val}:it));};
   const editSplits=(id,splits)=>{sII(prev=>prev.map(it=>it.id===id?{...it,splits}:it));};
@@ -1145,10 +1157,10 @@ export default function App(){
     <div
       onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=AC;e.currentTarget.style.background=`${AC}0d`;}}
       onDragLeave={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";}}
-      onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";const f=e.dataTransfer.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const txt=ev.target.result;const type=txt.includes("Lineitem name")||txt.includes("Financial Status")?"shopify":"square";const r=type==="shopify"?parseShopifyCSV(txt):parseSquareCSV(txt,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");sImpSrc(type);tw(`✓ Detected ${type==="shopify"?"Shopify":"Square"} CSV`);}catch(err){tw("⚠ Error reading file")}};reader.readAsText(f);}}
+      onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";const f=e.dataTransfer.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const txt=ev.target.result;const type=txt.includes("Lineitem name")||txt.includes("Financial Status")?"shopify":(txt.split('\n')[0]||"").includes("ID,Date,Total,Items,Payment")?"unboxed":"square";const r=type==="shopify"?parseShopifyCSV(txt):type==="unboxed"?parseUnboxedCSV(txt):parseSquareCSV(txt,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");sImpSrc(type);tw(`✓ Detected ${type==="shopify"?"Shopify":type==="unboxed"?"Unboxed":"Square"} CSV`);}catch(err){tw("⚠ Error reading file")}};reader.readAsText(f);}}
       style={{display:"flex",gap:6,marginBottom:14,alignItems:"center",flexWrap:"wrap",padding:"8px 12px",borderRadius:8,border:"1px dashed #3f3f46",transition:"all .2s"}}>
       <span style={{color:"#71717a",fontSize:9,fontWeight:600}}>📁 Drop CSV or:</span>
-      {[["shopify","🛒 Shopify"],["square","⬛ Square"]].map(([type,label])=>(
+      {[["shopify","🛒 Shopify"],["square","⬛ Square"],["unboxed","📦 Unboxed"]].map(([type,label])=>(
         <label key={type} style={{padding:"5px 12px",borderRadius:6,border:`1px solid ${CC[type]}40`,background:`${CC[type]}10`,color:CC[type],fontSize:10,fontWeight:600,cursor:"pointer",position:"relative",overflow:"hidden"}}>{label}<input type="file" accept=".csv" onChange={e=>{try{handleFile(e,type)}catch(err){tw("⚠ Error reading file")}}} style={{position:"absolute",top:0,left:0,width:"100%",height:"100%",opacity:0,cursor:"pointer"}}/></label>
       ))}
       <button onClick={()=>sDiscMode(v=>!v)} style={{padding:"5px 12px",borderRadius:6,border:`1px solid ${discMode?"#7c3aed40":"#3f3f46"}`,background:discMode?"rgba(124,58,237,.1)":"transparent",color:discMode?"#7c3aed":"#71717a",fontSize:10,fontWeight:600,cursor:"pointer"}}>📋 Discord</button>
