@@ -2207,6 +2207,7 @@ export default function App(){
     </SH>
     <SH id="log" icon="📋" label="UPDATE LOG">
       {[
+        {v:"1.2.3",items:["Move sales to/from Convention section (🎪 and ↩ buttons)"]},
         {v:"1.2.2",items:["📦 Unboxed CSV import option","🎪 Convention Sales split into separate section grouped by payment method"]},
         {v:"1.2.1",items:["Discord parses date from message (M/D/YYYY) instead of defaulting to today","Discord shows staff name (👤 badge) and 📝 Notes on import preview","🎪 Convention Sale support in Discord import","Venmo & Zelle payment channels — tracked separately, don't affect cash/amex balances","AI export matches new finance app backend format (daily earnings, type/channel mapping)","Analytics date range defaults to Jan 1"]},
         {v:"1.2.0",items:["Consignment # field in People — assign consignment numbers per person","Square import auto-detects owners by consignment number","Manual order form stays visible during pending Square/Shopify imports","Discord order paste import — copy from Discord, edit owners & amounts, then apply","Sort log by date (newest/oldest date) in addition to entry order"]},
