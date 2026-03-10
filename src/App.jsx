@@ -608,8 +608,8 @@ export default function App(){
           {search&&sr.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,marginTop:4,background:"#16162a",border:"1px solid #3f3f46",borderRadius:10,overflow:"hidden",zIndex:100}}>
             {sr.map(({n:p,t})=>(<div key={p} onClick={()=>{s1(p);sSR("");}} style={{padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",borderBottom:"1px solid rgba(63,63,70,.5)"}} onMouseEnter={e=>e.currentTarget.style.background="rgba(63,63,70,.6)"} onMouseLeave={e=>e.currentTarget.style.background="transparent"}><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:CO[p]}}/><span style={{fontWeight:600,fontSize:13}}>{p}</span></div><span style={{color:"#a1a1aa",fontFamily:"monospace",fontSize:12}}>{FF(t)}</span></div>))}</div>}</div>
       </div>
-      {(()=>{const tabItems=[["home","🏠 Home"],["input","💳 Transactions"],["sales","📊 Analytics"],["people","👥 People"],["settings","⚙️ Settings"]].filter(([id])=>!(viewOnly&&id==="input"));
-        const tabBtns=tabItems.map(([id,lb])=>(<button key={id} onClick={()=>{sTB(id);if(id==="sales")sSEC("daily");if(id==="input")sSEC("manual");}} style={{flex:isLeft?"none":"0 0 auto",padding:isLeft?`${ds(10)}px ${ds(14)}px`:`${ds(10)}px ${ds(14)}px`,borderRadius:8,border:"none",background:tab===id?T.tabActive:"transparent",color:tab===id?T.text:T.muted,cursor:"pointer",fontSize:fs(12),fontWeight:600,whiteSpace:"nowrap",textAlign:isLeft?"left":"center",width:isLeft?"100%":"auto"}}>{lb}</button>));
+      {(()=>{const tabItems=[["home","🏠 Home"],["input","💳 Transactions"],["sales","📊 Analytics"],["convention","🎪 Convention"],["people","👥 People"],["settings","⚙️ Settings"]].filter(([id])=>!(viewOnly&&id==="input"));
+        const tabBtns=tabItems.map(([id,lb])=>(<button key={id} onClick={()=>{sTB(id);if(id==="sales")sSEC("daily");if(id==="input")sSEC("manual");if(id==="convention")sSEC("conv-overview");}} style={{flex:isLeft?"none":"0 0 auto",padding:isLeft?`${ds(10)}px ${ds(14)}px`:`${ds(10)}px ${ds(14)}px`,borderRadius:8,border:"none",background:tab===id?T.tabActive:"transparent",color:tab===id?T.text:T.muted,cursor:"pointer",fontSize:fs(12),fontWeight:600,whiteSpace:"nowrap",textAlign:isLeft?"left":"center",width:isLeft?"100%":"auto"}}>{lb}</button>));
         const voTag=viewOnly?<div style={{display:"flex",alignItems:"center",marginLeft:isLeft?0:"auto",padding:"4px 10px",borderRadius:6,background:"rgba(139,92,246,.15)",border:"1px solid rgba(139,92,246,.3)",marginTop:isLeft?4:0}}><span style={{color:"#a78bfa",fontSize:9,fontWeight:700,letterSpacing:1}}>👁 VIEW ONLY</span></div>:null;
         if(isBottom)return <div style={{position:"fixed",bottom:0,left:0,right:0,display:"flex",gap:2,background:T.card,borderTop:`1px solid ${T.border}`,padding:3,zIndex:900,justifyContent:"center",touchAction:"manipulation"}}>{tabBtns}{voTag}</div>;
         if(isLeft)return <div style={{minWidth:160,display:"flex",flexDirection:"column",gap:2,background:T.tabBg,borderRadius:10,padding:3,position:"sticky",top:12,alignSelf:"flex-start"}}>{tabBtns}{voTag}</div>;
@@ -652,7 +652,7 @@ export default function App(){
 
 {/* ===== ANALYTICS ===== */}
 {tab==="sales"&&<>
-  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",touchAction:"manipulation"}}>{[["daily","📊 Daily"],["breakdown","📋 Breakdown"],["channels","💳 Channels"],["products","🏷️ Products"],["consign","📦 Consign"],["monthly","📅 Monthly"],["growth","📈 Growth"],["goal","🎯 Goal"],["buying","💰 Buying"],["convention","🎪 Convention"]].filter(([k])=>!uiCfg.hidden?.[`analytics.${k}`]).map(([k,l])=>(<button key={k} onClick={()=>sSEC(k)} style={bt(sec===k)}>{l}</button>))}</div>
+  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",touchAction:"manipulation"}}>{[["daily","📊 Daily"],["breakdown","📋 Breakdown"],["channels","💳 Channels"],["products","🏷️ Products"],["consign","📦 Consign"],["monthly","📅 Monthly"],["growth","📈 Growth"],["goal","🎯 Goal"],["buying","💰 Buying"]].filter(([k])=>!uiCfg.hidden?.[`analytics.${k}`]).map(([k,l])=>(<button key={k} onClick={()=>sSEC(k)} style={bt(sec===k)}>{l}</button>))}</div>
   <div style={{...cr,marginBottom:12,padding:"12px 14px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:8}}><span style={{color:"#71717a",fontSize:10,fontWeight:600}}>RANGE</span>{presets.map(p=>(<button key={p.l} onClick={()=>{sDF(p.f);sDT(p.t);}} style={bt(df===p.f&&dt===p.t)}>{p.l}</button>))}</div>
     <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><input type="date" value={df} onChange={e=>sDF(e.target.value)} style={{...is,fontSize:11,flex:1,minWidth:110,colorScheme:"dark"}}/><span style={{color:"#a1a1aa"}}>→</span><input type="date" value={dt} onChange={e=>sDT(e.target.value)} style={{...is,fontSize:11,flex:1,minWidth:110,colorScheme:"dark"}}/><span style={{color:"#71717a",fontSize:11}}>{fd.length}d</span></div></div>
   <EB key={sec}>
@@ -1154,45 +1154,43 @@ export default function App(){
       </div>}
       {total===0&&<div style={{textAlign:"center",padding:30,color:"#52525b",fontSize:12}}>No purchases in this date range.</div>}
     </>);})()}
-  {sec==="convention"&&(()=>{
+  </EB>
+</>}
+{/* ===== CONVENTION ===== */}
+{tab==="convention"&&<>
+  <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",touchAction:"manipulation"}}>{[["conv-overview","📊 Overview"],["conv-balances","💰 Balances"],["conv-sales","🛒 Sales"],["conv-cashout","💸 Cash Out"]].map(([k,l])=>(<button key={k} onClick={()=>sSEC(k)} style={bt(sec===k)}>{l}</button>))}</div>
+  <div style={{...cr,marginBottom:12,padding:"12px 14px"}}><div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:8}}><span style={{color:"#71717a",fontSize:10,fontWeight:600}}>RANGE</span>{presets.map(p=>(<button key={p.l} onClick={()=>{sDF(p.f);sDT(p.t);}} style={bt(df===p.f&&dt===p.t)}>{p.l}</button>))}</div>
+    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}><input type="date" value={df} onChange={e=>sDF(e.target.value)} style={{...is,fontSize:11,flex:1,minWidth:110,colorScheme:"dark"}}/><span style={{color:"#a1a1aa"}}>→</span><input type="date" value={dt} onChange={e=>sDT(e.target.value)} style={{...is,fontSize:11,flex:1,minWidth:110,colorScheme:"dark"}}/></div></div>
+  <EB key={"conv-"+sec}>
+  {(()=>{
     const convEntries=entries.filter(e=>e.conv&&e.d>=df&&e.d<=dt);
     const allConvEntries=entries.filter(e=>e.conv);
     const salesOnly=convEntries.filter(e=>e.io==="IN"||e.io==="CONSIGNMENT");
     const totalRev=salesOnly.reduce((s,e)=>s+e.a,0);
     const xfersOut=convEntries.filter(e=>e.io==="XFER_OUT");
     const totalXfOut=xfersOut.reduce((s,e)=>s+e.a,0);
-    // Per-person breakdown
     const byPerson={};convEntries.forEach(e=>{if(!byPerson[e.p])byPerson[e.p]={earned:0,xfOut:0,byCh:{}};const isIn=e.io==="IN"||e.io==="CONSIGNMENT"||e.io==="XFER_IN";if(e.io==="XFER_OUT"){byPerson[e.p].xfOut+=e.a;}else{const amt=isIn?e.a:-e.a;byPerson[e.p].earned+=amt;}const ch=e.c||"cash";byPerson[e.p].byCh[ch]=(byPerson[e.p].byCh[ch]||0)+(isIn?e.a:-e.a);});
     const pplList=Object.entries(byPerson).sort((a,b)=>b[1].earned-a[1].earned);
-    // Payment method totals
     const chTotals={};salesOnly.forEach(e=>{const ch=e.c||"cash";chTotals[ch]=(chTotals[ch]||0)+e.a;});
     const chList=Object.entries(chTotals).sort((a,b)=>b[1]-a[1]);
-    // All-time balances from convBalances memo
     const allTimePpl=Object.entries(convBalances).filter(([,v])=>v.total!==0).sort((a,b)=>b[1].total-a[1].total);
-    // Recent convention entries
     const recent=convEntries.sort((a,b)=>b.id-a.id).slice(0,30);
-    return(<>
-      {/* Summary */}
+
+    if(allConvEntries.length===0)return <div style={{textAlign:"center",padding:40,color:"#52525b",fontSize:12}}>No convention sales yet.<br/><span style={{fontSize:10,color:"#3f3f46"}}>Import orders with "convention" in notes or use the 🎪 button to tag items</span></div>;
+
+    if(sec==="conv-overview")return(<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:10}}>
         {[{l:"CONVENTION REVENUE",v:FF(totalRev),c:"#f97316"},{l:"CASHED OUT",v:FF(totalXfOut),c:"#a78bfa"},{l:"SALES",v:String(salesOnly.length)}].map((s,i)=>(<div key={i} style={cr}><div style={{color:"#71717a",fontSize:9,fontWeight:600}}>{s.l}</div><div style={{color:s.c||"#fff",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{s.v}</div></div>))}
       </div>
-      {/* All-time person balances */}
-      {allTimePpl.length>0&&<div style={{...cr,marginBottom:10,padding:"14px 16px"}}>
-        <div style={{color:"#f97316",fontSize:10,fontWeight:700,marginBottom:10}}>🎪 CONVENTION BALANCES (ALL TIME)</div>
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(allTimePpl.length,3)},1fr)`,gap:8}}>
-          {allTimePpl.map(([p,v])=>{const bal=v.total;return(<div key={p} style={{...cr,padding:"10px 12px",borderTop:`3px solid ${CO[p]||"#888"}`}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-              <span style={{color:CO[p]||"#888",fontSize:12,fontWeight:800}}>{p}</span>
-              <span style={{color:bal<0?"#ef4444":"#22c55e",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{FX(bal)}</span>
-            </div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
-              {Object.entries(v.byCh).filter(([,a])=>a!==0).map(([ch,a])=>(<span key={ch} style={{fontSize:8,color:CC[ch]||"#71717a",fontFamily:"monospace"}}>{CL[ch]||ch}: {FX(a)}</span>))}
-            </div>
-            {bal>0&&<button onClick={()=>{const amt=parseFloat(prompt(`Cash out ${p}?\nConvention balance: ${FX(bal)}\nEnter amount:`));if(!amt||isNaN(amt)||amt<=0||amt>bal)return;const gid=`CONV-XF-${Date.now()}`;const ne=[...entries,{id:Date.now(),c:"amex",d:TODAY,p,a:Math.round(amt*100)/100,io:"XFER_OUT",r:`Convention cash-out → Amex`,grp:gid,conv:true,t:new Date().toISOString()},{id:Date.now()+1,c:"amex",d:TODAY,p,a:Math.round(amt*100)/100,io:"XFER_IN",r:`Convention cash-out ← Convention`,grp:gid,t:new Date().toISOString()}];sE(ne);sv(ne);tw(`✓ Cashed out ${FX(amt)} from ${p}'s convention → Amex`);}} style={{padding:"4px 10px",borderRadius:5,border:"1px solid #a78bfa40",background:"rgba(167,139,250,.1)",color:"#a78bfa",cursor:"pointer",fontSize:9,fontWeight:700,width:"100%"}}>💸 Cash Out → Amex</button>}
-          </div>);})}
-        </div>
+      {pplList.length>0&&<div style={{...cr,marginBottom:10,padding:"12px 16px"}}>
+        <div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:8}}>EARNINGS BY PERSON</div>
+        {pplList.map(([p,v])=>{const pct=totalRev>0?(v.earned/totalRev*100):0;return(<div key={p} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <span style={{color:CO[p]||"#888",fontSize:11,fontWeight:700,minWidth:60}}>{p}</span>
+          <div style={{flex:1,height:6,background:"rgba(63,63,70,.4)",borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:CO[p]||"#888",borderRadius:3}}/></div>
+          <span style={{color:"#a1a1aa",fontFamily:"monospace",fontSize:10,minWidth:60,textAlign:"right"}}>{FF(v.earned)}</span>
+          <span style={{color:"#52525b",fontSize:9,minWidth:30,textAlign:"right"}}>{pct.toFixed(0)}%</span>
+        </div>);})}
       </div>}
-      {/* Payment method breakdown */}
       {chList.length>0&&<div style={{...cr,marginBottom:10,padding:"12px 16px"}}>
         <div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:8}}>REVENUE BY PAYMENT METHOD</div>
         <div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(chList.length,4)},1fr)`,gap:8}}>
@@ -1203,31 +1201,78 @@ export default function App(){
           </div>))}
         </div>
       </div>}
-      {/* Per-person earnings this period */}
-      {pplList.length>0&&<div style={{...cr,marginBottom:10,padding:"12px 16px"}}>
-        <div style={{color:"#71717a",fontSize:10,fontWeight:600,marginBottom:8}}>EARNINGS THIS PERIOD</div>
-        {pplList.map(([p,v])=>{const pct=totalRev>0?(v.earned/totalRev*100):0;return(<div key={p} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-          <span style={{color:CO[p]||"#888",fontSize:11,fontWeight:700,minWidth:60}}>{p}</span>
-          <div style={{flex:1,height:6,background:"rgba(63,63,70,.4)",borderRadius:3,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:CO[p]||"#888",borderRadius:3}}/></div>
-          <span style={{color:"#a1a1aa",fontFamily:"monospace",fontSize:10,minWidth:60,textAlign:"right"}}>{FF(v.earned)}</span>
-          <span style={{color:"#52525b",fontSize:9,minWidth:30,textAlign:"right"}}>{pct.toFixed(0)}%</span>
+    </>);
+
+    if(sec==="conv-balances")return(<>
+      <div style={{color:"#f97316",fontSize:12,fontWeight:800,marginBottom:10}}>🎪 CONVENTION BALANCES (ALL TIME)</div>
+      {allTimePpl.length>0?<div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(allTimePpl.length,2)},1fr)`,gap:10}}>
+        {allTimePpl.map(([p,v])=>{const bal=v.total;return(<div key={p} style={{...cr,padding:"14px 16px",borderTop:`3px solid ${CO[p]||"#888"}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <span style={{color:CO[p]||"#888",fontSize:14,fontWeight:800}}>{p}</span>
+            <span style={{color:bal<0?"#ef4444":"#22c55e",fontSize:20,fontWeight:800,fontFamily:"monospace"}}>{FX(bal)}</span>
+          </div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+            {Object.entries(v.byCh).filter(([,a])=>a!==0).map(([ch,a])=>(<div key={ch} style={{padding:"4px 8px",borderRadius:6,background:`${CC[ch]||"#555"}10`,border:`1px solid ${CC[ch]||"#555"}30`}}>
+              <div style={{fontSize:8,color:CC[ch]||"#71717a",fontWeight:600}}>{CL[ch]||ch}</div>
+              <div style={{fontSize:12,fontWeight:800,fontFamily:"monospace",color:"#fafafa"}}>{FX(a)}</div>
+            </div>))}
+          </div>
+          {bal>0&&<button onClick={()=>{sSEC("conv-cashout");}} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #a78bfa40",background:"rgba(167,139,250,.1)",color:"#a78bfa",cursor:"pointer",fontSize:10,fontWeight:700,width:"100%"}}>💸 Cash Out</button>}
         </div>);})}
-      </div>}
-      {/* Recent convention entries */}
-      {recent.length>0&&<div style={{...cr,padding:0,overflow:"hidden"}}>
-        <div style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.5)"}}><span style={{color:"#f97316",fontSize:10,fontWeight:600}}>🎪 RECENT CONVENTION ENTRIES</span></div>
-        <div style={{maxHeight:300,overflowY:"auto"}}>
-          {recent.map(e=>(<div key={e.id} style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.3)",display:"flex",alignItems:"center",gap:8}}>
+      </div>:<div style={{textAlign:"center",padding:30,color:"#52525b",fontSize:12}}>No convention balances yet.</div>}
+    </>);
+
+    if(sec==="conv-sales")return(<>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:10}}>
+        {[{l:"TOTAL",v:FF(totalRev),c:"#f97316"},{l:"SALES",v:String(salesOnly.length)}].map((s,i)=>(<div key={i} style={cr}><div style={{color:"#71717a",fontSize:9,fontWeight:600}}>{s.l}</div><div style={{color:s.c||"#fff",fontSize:16,fontWeight:800,fontFamily:"monospace"}}>{s.v}</div></div>))}
+      </div>
+      {recent.length>0?<div style={{...cr,padding:0,overflow:"hidden"}}>
+        <div style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.5)"}}><span style={{color:"#f97316",fontSize:10,fontWeight:600}}>🎪 CONVENTION SALES</span></div>
+        <div style={{maxHeight:500,overflowY:"auto"}}>
+          {recent.map(e=>(<div key={e.id} style={{padding:"10px 16px",borderBottom:"1px solid rgba(63,63,70,.3)",display:"flex",alignItems:"center",gap:8}}>
             <span style={{color:CO[e.p]||"#888",fontSize:10,fontWeight:700,minWidth:48}}>{e.p}</span>
-            <span style={{fontSize:8,fontWeight:700,padding:"1px 6px",borderRadius:4,border:`1px solid ${CC[e.c]||"#555"}40`,background:`${CC[e.c]||"#555"}10`,color:CC[e.c]||"#555"}}>{CL[e.c]||e.c}</span>
+            <span style={{fontSize:8,fontWeight:700,padding:"2px 6px",borderRadius:4,border:`1px solid ${CC[e.c]||"#555"}40`,background:`${CC[e.c]||"#555"}10`,color:CC[e.c]||"#555"}}>{CL[e.c]||e.c}</span>
             <div style={{flex:1,minWidth:0}}><div style={{color:"#d4d4d8",fontSize:11,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{e.r||""}</div>
-              <div style={{color:"#52525b",fontSize:9}}>{SD(e.d)}</div></div>
-            <span style={{color:e.io==="XFER_OUT"?"#a78bfa":"#22c55e",fontFamily:"monospace",fontSize:11,fontWeight:700}}>{e.io==="XFER_OUT"?"-":""}{FX(e.a)}</span>
+              <div style={{color:"#52525b",fontSize:9}}>{SD(e.d)}{e.ord&&` · ${e.ord}`}</div></div>
+            <span style={{color:e.io==="XFER_OUT"?"#a78bfa":"#22c55e",fontFamily:"monospace",fontSize:12,fontWeight:700}}>{e.io==="XFER_OUT"?"-":"+"}{FX(e.a)}</span>
+          </div>))}
+        </div>
+      </div>:<div style={{textAlign:"center",padding:30,color:"#52525b",fontSize:12}}>No convention sales in this period.</div>}
+    </>);
+
+    if(sec==="conv-cashout")return(<>
+      <div style={{color:"#a78bfa",fontSize:12,fontWeight:800,marginBottom:10}}>💸 CASH OUT CONVENTION → AMEX</div>
+      <div style={{color:"#71717a",fontSize:10,marginBottom:14}}>Transfer convention earnings to the main Amex account. This debits the convention balance and credits the Amex balance.</div>
+      {allTimePpl.filter(([,v])=>v.total>0).length>0?<div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(allTimePpl.filter(([,v])=>v.total>0).length,2)},1fr)`,gap:10}}>
+        {allTimePpl.filter(([,v])=>v.total>0).map(([p,v])=>{const bal=v.total;return(<div key={p} style={{...cr,padding:"14px 16px",borderTop:`3px solid ${CO[p]||"#888"}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <span style={{color:CO[p]||"#888",fontSize:14,fontWeight:800}}>{p}</span>
+            <span style={{color:"#22c55e",fontSize:18,fontWeight:800,fontFamily:"monospace"}}>{FX(bal)}</span>
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+            {Object.entries(v.byCh).filter(([,a])=>a>0).map(([ch,a])=>(<span key={ch} style={{fontSize:9,color:CC[ch]||"#71717a",fontFamily:"monospace"}}>{CL[ch]||ch}: {FX(a)}</span>))}
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>{const gid=`CONV-XF-${Date.now()}`;const ne=[...entries,{id:Date.now(),c:"amex",d:TODAY,p,a:Math.round(bal*100)/100,io:"XFER_OUT",r:`Convention cash-out → Amex (full)`,grp:gid,conv:true,t:new Date().toISOString()},{id:Date.now()+1,c:"amex",d:TODAY,p,a:Math.round(bal*100)/100,io:"XFER_IN",r:`Convention cash-out ← Convention`,grp:gid,t:new Date().toISOString()}];sE(ne);sv(ne);tw(`✓ Cashed out ${FX(bal)} from ${p}'s convention → Amex`);}} style={{flex:1,padding:"8px 12px",borderRadius:6,border:"none",background:"#a78bfa",color:"#fafafa",cursor:"pointer",fontSize:11,fontWeight:700}}>Cash Out All ({FX(bal)})</button>
+            <button onClick={()=>{const amt=parseFloat(prompt(`Cash out ${p}?\nConvention balance: ${FX(bal)}\nEnter amount:`));if(!amt||isNaN(amt)||amt<=0||amt>bal)return;const gid=`CONV-XF-${Date.now()}`;const ne=[...entries,{id:Date.now(),c:"amex",d:TODAY,p,a:Math.round(amt*100)/100,io:"XFER_OUT",r:`Convention cash-out → Amex`,grp:gid,conv:true,t:new Date().toISOString()},{id:Date.now()+1,c:"amex",d:TODAY,p,a:Math.round(amt*100)/100,io:"XFER_IN",r:`Convention cash-out ← Convention`,grp:gid,t:new Date().toISOString()}];sE(ne);sv(ne);tw(`✓ Cashed out ${FX(amt)} from ${p}'s convention → Amex`);}} style={{flex:1,padding:"8px 12px",borderRadius:6,border:"1px solid #a78bfa40",background:"transparent",color:"#a78bfa",cursor:"pointer",fontSize:11,fontWeight:700}}>Custom Amount</button>
+          </div>
+        </div>);})}
+      </div>:<div style={{textAlign:"center",padding:30,color:"#52525b",fontSize:12}}>No convention balances to cash out.</div>}
+      {/* Cash-out history */}
+      {xfersOut.length>0&&<div style={{...cr,padding:0,overflow:"hidden",marginTop:10}}>
+        <div style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.5)"}}><span style={{color:"#a78bfa",fontSize:10,fontWeight:600}}>CASH-OUT HISTORY</span></div>
+        <div style={{maxHeight:250,overflowY:"auto"}}>
+          {xfersOut.sort((a,b)=>b.id-a.id).map(e=>(<div key={e.id} style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.3)",display:"flex",alignItems:"center",gap:8}}>
+            <span style={{color:CO[e.p]||"#888",fontSize:10,fontWeight:700,minWidth:48}}>{e.p}</span>
+            <div style={{flex:1}}><div style={{color:"#d4d4d8",fontSize:10}}>{e.r}</div><div style={{color:"#52525b",fontSize:9}}>{SD(e.d)}</div></div>
+            <span style={{color:"#a78bfa",fontFamily:"monospace",fontSize:11,fontWeight:700}}>-{FX(e.a)}</span>
           </div>))}
         </div>
       </div>}
-      {allConvEntries.length===0&&<div style={{textAlign:"center",padding:40,color:"#52525b",fontSize:12}}>No convention sales yet.<br/><span style={{fontSize:10,color:"#3f3f46"}}>Import orders with "convention" in notes or use the 🎪 button to tag items</span></div>}
-    </>);})()}
+    </>);
+
+    return null;
+  })()}
   </EB>
 </>}
 {/* ===== INPUT ===== */}
