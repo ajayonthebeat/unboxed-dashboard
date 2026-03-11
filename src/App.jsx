@@ -63,17 +63,51 @@ function parseShopifyCSV(t){const{data:rows}=Papa.parse(t,{header:true,skipEmpty
     if(o.refunded&&!it.fl.includes("refunded"))it.fl.push("refunded");}
   return{items,channel:"shopify"};}
 function parseUnboxedCSV(t){const{data:rows}=Papa.parse(t,{header:true,skipEmptyLines:true});const items=[];
-  for(const r of rows){const raw=r["Date"];if(!raw)continue;
-    const amt=parseFloat(String(r["Total"]||"0").replace(/[$,]/g,""))||0;if(amt<=0)continue;
-    const ts=raw;const date=raw.slice(0,10);
-    const payment=(r["Payment"]||"cash").toLowerCase().trim();
-    const ch=payment.includes("square")?"square":payment.includes("amex")?"amex":payment.includes("venmo")?"venmo":payment.includes("zelle")?"zelle":"cash";
-    const staff=(r["Staff"]||"").trim();const notes=(r["Notes"]||"").trim();
-    const source=(r["Source"]||"").trim();const txnId=r["ID"]||"";const itemCount=parseInt(r["Items"])||1;
-    const saleType=notes.toLowerCase().includes("convention")||name.toLowerCase().includes("convention")?"convention":source==="private"?"private":"pos";
-    const name=notes?`${notes}`:`Sale #${txnId}`;
-    items.push({id:items.length,date,name,amt,owner:"UNKNOWN",fl:["unknown"],order:`UB-${txnId}`,device:"",ch,staff,notes,saleType,source,itemCount,timestamp:ts});}
-  return{items,channel:items[0]?.ch||"square"};}
+  const hdrs=Object.keys(rows[0]||{});
+  if(hdrs.includes("Transaction ID")){
+    // New Unboxed format — one row per item
+    const OWN_MAP={ajay:"AJAY",derek:"DEREK",shared:"SHARED",lj:"LJ",janely:"JANELY"};
+    for(const r of rows){const txnId=r["Transaction ID"];if(!txnId)continue;
+      const price=parseFloat(String(r["Item Price"]||"0").replace(/[$,]/g,""))||0;
+      const qty=parseInt(r["Quantity"])||1;const amt=Math.round(price*qty*100)/100;if(amt<=0)continue;
+      const date=(r["Date"]||"").trim();if(!date)continue;
+      const time=(r["Time"]||"").trim();const staff=(r["Staff"]||"").trim();
+      const itemName=(r["Item Name"]||"").trim();
+      const ownerRaw=(r["Owner Account"]||"").trim().toLowerCase();
+      const owner=OWN_MAP[ownerRaw]||ownerRaw.toUpperCase()||"UNKNOWN";
+      const source=(r["Source"]||"").trim();
+      const payMethod=(r["Payment Method"]||"").trim().toLowerCase();
+      const notes=(r["Notes"]||"").trim();const notesLow=notes.toLowerCase();
+      // Channel from payment method
+      let ch=payMethod.includes("square")?"square":payMethod.includes("zelle")?"zelle":payMethod.includes("venmo")?"venmo":payMethod.includes("amex")?"amex":"cash";
+      // Convention detection
+      const isConv=notesLow.includes("convention");
+      // Parse notes for actual payment & receiver on convention sales
+      let rcvdBy="";
+      if(isConv&&notes.includes("|")){const parts=notes.split("|").map(s=>s.trim());
+        for(const part of parts){const pl=part.toLowerCase();
+          if(pl.includes("venmo")){ch="venmo";const w=part.split(/\s+/).filter(x=>!/venmo|platform:|convention/i.test(x));if(w.length)rcvdBy=w[0].toUpperCase();}
+          else if(pl.includes("zelle")){ch="zelle";const w=part.split(/\s+/).filter(x=>!/zelle|platform:|convention/i.test(x));if(w.length)rcvdBy=w[0].toUpperCase();}
+          else if((pl==="cash"||pl.startsWith("cash "))&&!pl.includes("platform")){ch="cash";const w=part.split(/\s+/).filter(x=>!/cash|platform:/i.test(x));if(w.length)rcvdBy=w[0].toUpperCase();}
+        }}
+      const saleType=isConv?"convention":source==="Private Sale"?"private":source==="In-Store"?"pos":"pos";
+      const fl=[];if(payMethod==="split_cash_card")fl.push("split_pay");if(owner==="UNKNOWN")fl.push("unknown");
+      items.push({id:items.length,date,name:itemName||`Sale #${txnId}`,amt,owner,fl,order:`UB-${txnId}`,device:"",ch,staff,notes,saleType,source,itemCount:qty,timestamp:`${date} ${time}`,rcvdBy:rcvdBy||undefined});}
+  } else {
+    // Legacy format: ID,Date,Total,Items,Payment
+    for(const r of rows){const raw=r["Date"];if(!raw)continue;
+      const amt=parseFloat(String(r["Total"]||"0").replace(/[$,]/g,""))||0;if(amt<=0)continue;
+      const ts=raw;const date=raw.slice(0,10);
+      const payment=(r["Payment"]||"cash").toLowerCase().trim();
+      const ch=payment.includes("square")?"square":payment.includes("amex")?"amex":payment.includes("venmo")?"venmo":payment.includes("zelle")?"zelle":"cash";
+      const staff=(r["Staff"]||"").trim();const notes=(r["Notes"]||"").trim();
+      const source=(r["Source"]||"").trim();const txnId=r["ID"]||"";const itemCount=parseInt(r["Items"])||1;
+      const name=notes?`${notes}`:`Sale #${txnId}`;
+      const saleType=notes.toLowerCase().includes("convention")||name.toLowerCase().includes("convention")?"convention":source==="private"?"private":"pos";
+      items.push({id:items.length,date,name,amt,owner:"UNKNOWN",fl:["unknown"],order:`UB-${txnId}`,device:"",ch,staff,notes,saleType,source,itemCount,timestamp:ts});}
+  }
+  const chCounts={};items.forEach(i=>{chCounts[i.ch]=(chCounts[i.ch]||0)+1;});
+  return{items,channel:Object.entries(chCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||"square"};}
 function parseSquareCSV(t,pplInfo){const{data:rows}=Papa.parse(t,{header:true,skipEmptyLines:true});const items=[];
   for(const r of rows){const date=r["Date"];if(!date)continue;
     const amt=parseFloat(String(r["Net Sales"]||"0").replace(/[$,]/g,""))||0;if(amt<=0)continue;
@@ -1294,7 +1328,7 @@ export default function App(){
     <div
       onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=AC;e.currentTarget.style.background=`${AC}0d`;}}
       onDragLeave={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";}}
-      onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";const f=e.dataTransfer.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const txt=ev.target.result;const type=txt.includes("Lineitem name")||txt.includes("Financial Status")?"shopify":(txt.split('\n')[0]||"").includes("ID,Date,Total,Items,Payment")?"unboxed":"square";const r=type==="shopify"?parseShopifyCSV(txt):type==="unboxed"?parseUnboxedCSV(txt):parseSquareCSV(txt,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");sImpSrc(type);tw(`✓ Detected ${type==="shopify"?"Shopify":type==="unboxed"?"Unboxed":"Square"} CSV`);}catch(err){tw("⚠ Error reading file")}};reader.readAsText(f);}}
+      onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor="#3f3f46";e.currentTarget.style.background="transparent";const f=e.dataTransfer.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const txt=ev.target.result;const hdr=txt.split('\n')[0]||"";const type=txt.includes("Lineitem name")||txt.includes("Financial Status")?"shopify":hdr.includes("Transaction ID")||hdr.includes("ID,Date,Total,Items,Payment")?"unboxed":"square";const r=type==="shopify"?parseShopifyCSV(txt):type==="unboxed"?parseUnboxedCSV(txt):parseSquareCSV(txt,pplInfo);sII(flagDupes(r.items));sIC(r.channel);sIF("all");sImpSrc(type);tw(`✓ Detected ${type==="shopify"?"Shopify":type==="unboxed"?"Unboxed":"Square"} CSV`);}catch(err){tw("⚠ Error reading file")}};reader.readAsText(f);}}
       style={{display:"flex",gap:6,marginBottom:14,alignItems:"center",flexWrap:"wrap",padding:"8px 12px",borderRadius:8,border:"1px dashed #3f3f46",transition:"all .2s"}}>
       <span style={{color:"#71717a",fontSize:9,fontWeight:600}}>📁 Drop CSV or:</span>
       {[["shopify","🛒 Shopify"],["square","⬛ Square"],["unboxed","📦 Unboxed"]].map(([type,label])=>(
