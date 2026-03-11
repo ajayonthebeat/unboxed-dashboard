@@ -295,9 +295,12 @@ export default function App(){
     });
     if(migFixed){try{(() => { try { localStorage.setItem("ub-e3", JSON.stringify(p)); return { value: JSON.stringify(p) }; } catch(e) { return null; } })();}catch(e){}}
     // Revert: undo the shopify→amex migration that incorrectly changed old entries
-    if(!localStorage.getItem("ub-shopRevert1")){
-      let ct=0;p.forEach(e=>{if(e.src==="shopify"&&e.c==="amex"){e.c="shopify";ct++;}});
-      localStorage.setItem("ub-shopRevert1","1");
+    // Catches both entries with src:"shopify" AND old entries without src but with Shopify order numbers (#...)
+    if(!localStorage.getItem("ub-shopRevert2")){
+      let ct=0;p.forEach(e=>{
+        if(e.c==="amex"&&(e.src==="shopify"||(!e.src&&e.ord&&e.ord.startsWith("#")))){e.c="shopify";ct++;}
+      });
+      localStorage.setItem("ub-shopRevert2","1");
       if(ct>0){try{(() => { try { localStorage.setItem("ub-e3", JSON.stringify(p)); return { value: JSON.stringify(p) }; } catch(e) { return null; } })();}catch(e){}}
     }
     // One-time: add $4225 pending draw for AJAY and DEREK
