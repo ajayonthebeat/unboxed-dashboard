@@ -465,25 +465,8 @@ export default function App(){
         {amt:shopA,c:isSpl?shopSplitCh:actualCh,lbl:label},
         {amt:cashA,c:cashSplitCh,lbl:`${label} (cash split)`}
       ];
-      // Handle trade credit separately as a transfer
-      if(tradeA>0){
-        const tradeFrom=it.tradeFrom||"SELF";
-        const tradeTo=it.owner;
-        const isConsigner=!OWNERS.has(tradeTo);
-        const cfg=COMM[tradeTo]||DEF_COMM;
-        const consignerPortion=isConsigner?Math.round(tradeA*(1-cfg.rate)*100)/100:tradeA;
-        const hint=isConsigner?` (consign portion: ${FX(consignerPortion)})`:"";
-        if(tradeFrom==="SELF"){
-          // Self trade credit — just credited to the item owner's amex account
-          ne.push({id:ts(),c:"amex",d:it.date,p:tradeTo,a:tradeA,io:"IN",r:`${label} (trade credit${hint})`,ord:it.order||"",t:new Date().toISOString()});
-        } else {
-          // Transfer: FROM person's amex pays, TO person's amex receives
-          ne.push({id:ts(),c:"amex",d:it.date,p:tradeTo,a:tradeA,io:"IN",r:`${label} (trade credit from ${tradeFrom}${hint})`,ord:it.order||"",t:new Date().toISOString()});
-          if(tradeFrom!==tradeTo){
-            ne.push({id:ts(),c:"amex",d:it.date,p:tradeFrom,a:tradeA,io:"OUT",r:`${label} (trade credit → ${tradeTo})`,ord:it.order||"",t:new Date().toISOString()});
-          }
-        }
-      }
+      // Trade credit is store credit being used — NOT real money, so no entry created.
+      // Only the card/cash portions (shopA, cashA) generate balance entries.
       // Processing fee only applies to digital channels (shopify/square), not cash/amex
       const hasProcFee=(ch==="shopify"||ch==="square");
       for(const pt of portions){
