@@ -1869,6 +1869,45 @@ export default function App(){
       sE(ne);sv(ne);sXfAmt("");sXfNote("");sXfRecips([]);sCartImg(null);tw(`✓ Transferred ${FX(total)} from ${senders.map(s=>s.p).join("+")} → ${recips.length} people`);
     }} style={{width:"100%",padding:"12px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#ef4444,#10b981)",color:"#fafafa",cursor:"pointer",fontSize:13,fontWeight:700}}>Transfer {(xfRecips||[]).reduce((s,r)=>s+(parseFloat(r.amt)||0),0)>0?FX((xfRecips||[]).reduce((s,r)=>s+(parseFloat(r.amt)||0),0)):""}</button>
   </>}
+  {/* Transfer History */}
+  {(()=>{const xfers=entries.filter(e=>e.io==="XFER_OUT"||e.io==="XFER_IN").sort((a,b)=>b.d>a.d?1:b.d<a.d?-1:(b.t||"")>(a.t||"")?1:-1);
+    if(!xfers.length)return null;
+    // Group by grp id to show paired transfers
+    const grps={};xfers.forEach(e=>{const k=e.grp||e.id;if(!grps[k])grps[k]={outs:[],ins:[],d:e.d,t:e.t};if(e.io==="XFER_OUT")grps[k].outs.push(e);else grps[k].ins.push(e);});
+    const grpList=Object.values(grps).sort((a,b)=>b.d>a.d?1:b.d<a.d?-1:(b.t||"")>(a.t||"")?1:-1);
+    return(<div style={{...cr,overflow:"hidden",padding:0,marginTop:14}}>
+      <div style={{padding:"10px 14px",borderBottom:"1px solid rgba(63,63,70,.5)",display:"flex",justifyContent:"space-between"}}>
+        <span style={{color:AC,fontSize:11,fontWeight:700}}>↔ TRANSFER HISTORY</span>
+        <span style={{color:"#71717a",fontSize:9}}>{grpList.length} transfer{grpList.length>1?"s":""}</span>
+      </div>
+      <div style={{maxHeight:400,overflowY:"auto"}}>
+        {grpList.map((g,gi)=>{const amt=g.outs.reduce((s,e)=>s+e.a,0)||g.ins.reduce((s,e)=>s+e.a,0);
+          const fromPpl=g.outs.map(e=>e.p);const toPpl=g.ins.map(e=>e.p);
+          const label=g.outs[0]?.r||g.ins[0]?.r||"Transfer";
+          const isConv=g.outs.some(e=>e.conv)||g.ins.some(e=>e.conv);
+          const fromCh=g.outs[0]?.c||"";const toCh=g.ins[0]?.c||"";
+          return(<div key={gi} style={{padding:"10px 14px",borderBottom:"1px solid rgba(63,63,70,.2)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+              <span style={{color:"#fafafa",fontFamily:"monospace",fontSize:12,fontWeight:800}}>{FX(amt)}</span>
+              {isConv&&<span style={{color:"#f97316",fontSize:8,fontWeight:700}}>🎪</span>}
+              <span style={{color:"#52525b",fontSize:8,flexShrink:0}}>{SD(g.d)}</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:4,flexWrap:"wrap"}}>
+              {fromPpl.map(p=>(<span key={p} style={{color:CO[p]||"#888",fontSize:9,fontWeight:700}}>{p}</span>))}
+              {fromCh&&<span style={{fontSize:7,color:CC[fromCh]||"#555",fontWeight:600}}>({fromCh})</span>}
+              <span style={{color:"#71717a",fontSize:10}}>→</span>
+              {toPpl.map((p,i)=>{const e=g.ins[i];return(<span key={p+i} style={{display:"inline-flex",alignItems:"center",gap:3}}>
+                <span style={{color:CO[p]||"#888",fontSize:9,fontWeight:700}}>{p}</span>
+                {e&&<span style={{color:"#10b981",fontFamily:"monospace",fontSize:9}}>{FX(e.a)}</span>}
+              </span>);})}
+              {toCh&&toCh!==fromCh&&<span style={{fontSize:7,color:CC[toCh]||"#555",fontWeight:600}}>({toCh})</span>}
+            </div>
+            {label&&!label.startsWith("Transfer ")&&<div style={{color:"#71717a",fontSize:8,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{label}</div>}
+            {g.ins.some(e=>e.img)&&<div style={{marginTop:4}}>{g.ins.filter(e=>e.img).map(e=>(<img key={e.id} src={e.img} onClick={()=>sViewImg(e.img)} style={{height:32,borderRadius:4,cursor:"pointer",border:"1px solid #3f3f46",marginRight:4}}/>))}</div>}
+          </div>);})}
+      </div>
+    </div>);
+  })()}
   </div>}
   {sec==="trade"&&<div style={{...cr,padding:"20px"}}>
     <div style={{color:"#a1a1aa",fontSize:10,fontWeight:600,letterSpacing:1,marginBottom:10}}>LOG A TRADE</div>
