@@ -1984,6 +1984,52 @@ export default function App(){
         </div>
       </div>}
       {acctTxns.length===0&&<div style={{textAlign:"center",padding:"20px",color:"#52525b",fontSize:12}}>No {bkAcct} transactions yet</div>}
+      {/* Combined ledger: all activity for selected account */}
+      {(()=>{
+        // Map account to entry channel
+        const chMap={AMEX:"amex",CHASE:"chase",CASH:"cash"};const aCh=chMap[bkAcct];
+        // Get all entries for this channel
+        const acctEntries=entries.filter(e=>e.c===aCh||((bkAcct==="AMEX")&&(e.c==="square"||e.c==="shopify")));
+        // Combine bankTxns + entries into unified ledger
+        const ledger=[];
+        acctTxns.forEach(t=>{ledger.push({id:"b-"+t.id,d:t.d,t:t.t||"",type:t.type==="deposit"?"in":"out",amt:t.amt,desc:t.note||"Bank "+t.type,person:"",src:"bank",io:t.type==="deposit"?"DEPOSIT":"WITHDRAWAL"});});
+        acctEntries.forEach(e=>{
+          const isIn=e.io==="IN"||e.io==="CONSIGNMENT"||e.io==="XFER_IN"||e.io==="TRADE_IN";
+          const isRef=e.io==="REFUND";
+          ledger.push({id:"e-"+e.id,d:e.d,t:e.t||"",type:isIn?"in":isRef?"refund":"out",amt:e.a,desc:e.r||"",person:e.p,src:e.src||"entry",io:e.io,ord:e.ord,conv:e.conv});
+        });
+        ledger.sort((a,b)=>b.d>a.d?1:b.d<a.d?-1:(b.t||"")>(a.t||"")?1:-1);
+        const totalIn=ledger.filter(l=>l.type==="in").reduce((s,l)=>s+l.amt,0);
+        const totalOut=ledger.filter(l=>l.type!=="in").reduce((s,l)=>s+l.amt,0);
+        if(!ledger.length)return null;
+        return(<div style={{...cr,overflow:"hidden",padding:0,marginTop:12}}>
+          <div style={{padding:"10px 14px",borderBottom:"1px solid rgba(63,63,70,.5)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{color:bkAcct==="AMEX"?"#06b6d4":bkAcct==="CASH"?"#22c55e":"#3b82f6",fontSize:11,fontWeight:700}}>{bkAcct} — ALL ACTIVITY</span>
+              <span style={{color:"#71717a",fontSize:9}}>{ledger.length} total</span>
+            </div>
+            <div style={{display:"flex",gap:12,marginTop:6}}>
+              <span style={{color:"#10b981",fontSize:10,fontFamily:"monospace",fontWeight:700}}>⬆ In: {FX(totalIn)}</span>
+              <span style={{color:"#ef4444",fontSize:10,fontFamily:"monospace",fontWeight:700}}>⬇ Out: {FX(totalOut)}</span>
+              <span style={{color:"#a1a1aa",fontSize:10,fontFamily:"monospace",fontWeight:700}}>Net: {FX(totalIn-totalOut)}</span>
+            </div>
+          </div>
+          <div style={{maxHeight:500,overflowY:"auto"}}>
+            {ledger.map(l=>{const isIn=l.type==="in";const isRef=l.type==="refund";const clr=isIn?"#10b981":isRef?"#dc2626":"#ef4444";
+              const ioLabels={IN:"Sale",CONSIGNMENT:"Consign",OUT:"Buy/Pull",XFER_IN:"Xfer In",XFER_OUT:"Xfer Out",PYOUT:"Payout",REFUND:"Refund",DEPOSIT:"Deposit",WITHDRAWAL:"Withdrawal",TRADE_IN:"Trade In"};
+              return(<div key={l.id} style={{display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderBottom:"1px solid rgba(63,63,70,.2)"}}>
+                <span style={{color:clr,fontSize:9,fontWeight:700,minWidth:14}}>{isIn?"⬆":"⬇"}</span>
+                <span style={{color:clr,fontFamily:"monospace",fontSize:11,fontWeight:700,minWidth:60,textAlign:"right"}}>{isIn?"+":"-"}{FX(l.amt)}</span>
+                <span style={{fontSize:8,fontWeight:600,padding:"1px 5px",borderRadius:3,border:`1px solid ${clr}30`,background:`${clr}10`,color:clr,flexShrink:0}}>{ioLabels[l.io]||l.io}</span>
+                {l.person&&<span style={{color:CO[l.person]||"#888",fontSize:9,fontWeight:700,minWidth:40}}>{l.person}</span>}
+                {l.conv&&<span style={{color:"#f97316",fontSize:7,fontWeight:700}}>🎪</span>}
+                <span style={{color:"#a1a1aa",fontSize:9,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{l.desc}</span>
+                {l.ord&&<span style={{color:"#52525b",fontSize:8,fontFamily:"monospace",flexShrink:0}}>{l.ord}</span>}
+                <span style={{color:"#52525b",fontSize:8,flexShrink:0}}>{SD(l.d)}</span>
+              </div>);})}
+          </div>
+        </div>);
+      })()}
     </div>);
   })()}
   
