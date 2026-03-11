@@ -306,6 +306,12 @@ export default function App(){
     // Merge "12" person into SHARED
     {let ct=0;p.forEach(e=>{if(e.p==="12"){e.p="SHARED";ct++;}});
       if(ct>0){try{localStorage.setItem("ub-e3",JSON.stringify(p));}catch(e){}}}
+    // One-time: zero out AJAY convention amex balance
+    if(!localStorage.getItem("ub-convAmexFix")){
+      p.push({id:Date.now()+.993,c:"amex",d:TODAY,p:"AJAY",a:157.32,io:"XFER_IN",r:"Convention amex balance adjustment",conv:true,t:new Date().toISOString()});
+      localStorage.setItem("ub-convAmexFix","1");
+      try{localStorage.setItem("ub-e3",JSON.stringify(p));}catch(e){}
+    }
     // One-time: add $4225 pending draw for AJAY and DEREK
     if(!p.find(e=>e.r==="Pending draw: AMEX split"&&e.p==="AJAY")){
       p.push({id:Date.now()+.991,c:"amex",d:TODAY,p:"AJAY",a:4225,io:"XFER_IN",r:"Pending draw: AMEX split",t:new Date().toISOString()});
