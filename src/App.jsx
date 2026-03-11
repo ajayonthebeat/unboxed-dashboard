@@ -66,7 +66,7 @@ function parseUnboxedCSV(t){const{data:rows}=Papa.parse(t,{header:true,skipEmpty
   const hdrs=Object.keys(rows[0]||{});
   if(hdrs.includes("Transaction ID")){
     // New Unboxed format — one row per item
-    const OWN_MAP={ajay:"AJAY",derek:"DEREK",shared:"SHARED",lj:"LJ",janely:"JANELY"};
+    const OWN_MAP={ajay:"AJAY",derek:"DEREK",shared:"SHARED","12":"SHARED",lj:"LJ",janely:"JANELY"};
     for(const r of rows){const txnId=r["Transaction ID"];if(!txnId)continue;
       const price=parseFloat(String(r["Item Price"]||"0").replace(/[$,]/g,""))||0;
       const qty=parseInt(r["Quantity"])||1;const amt=Math.round(price*qty*100)/100;if(amt<=0)continue;
@@ -218,7 +218,7 @@ export default function App(){
   </div>);
   const[ct,sCT]=useState("area");const[tab,sTB]=useState("home");const[cv,sCV]=useState("stacked");const[bv,sBV]=useState("grouped");const[showTot,sSTot]=useState(false);const[visCh,sVisCh]=useState(["shopify","square","cash","amex"]);const[stgExp,sStgExp]=useState(new Set());
   const[toast,sT]=useState(null);const[impFilter,sIF]=useState("all");const[discMode,sDiscMode]=useState(false);
-  const[impItems,sII]=useState(()=>{try{const v=localStorage.getItem("ub-imp");return v?JSON.parse(v):null;}catch(e){return null;}});
+  const[impItems,sII]=useState(()=>{try{const v=localStorage.getItem("ub-imp");if(!v)return null;const arr=JSON.parse(v);let changed=false;arr.forEach(i=>{if(i.owner==="12"){i.owner="SHARED";changed=true;}});if(changed)localStorage.setItem("ub-imp",JSON.stringify(arr));return arr;}catch(e){return null;}});
   const[impCh,sIC]=useState(()=>{try{return localStorage.getItem("ub-impCh")||"";}catch(e){return"";}});
   const[impSrc,sImpSrc]=useState(()=>{try{return localStorage.getItem("ub-impSrc")||"";}catch(e){return"";}});
   useEffect(()=>{try{if(impItems)localStorage.setItem("ub-imp",JSON.stringify(impItems));else localStorage.removeItem("ub-imp");}catch(e){}},[impItems]);
@@ -303,6 +303,9 @@ export default function App(){
       localStorage.setItem("ub-shopRevert2","1");
       if(ct>0){try{(() => { try { localStorage.setItem("ub-e3", JSON.stringify(p)); return { value: JSON.stringify(p) }; } catch(e) { return null; } })();}catch(e){}}
     }
+    // Merge "12" person into SHARED
+    {let ct=0;p.forEach(e=>{if(e.p==="12"){e.p="SHARED";ct++;}});
+      if(ct>0){try{localStorage.setItem("ub-e3",JSON.stringify(p));}catch(e){}}}
     // One-time: add $4225 pending draw for AJAY and DEREK
     if(!p.find(e=>e.r==="Pending draw: AMEX split"&&e.p==="AJAY")){
       p.push({id:Date.now()+.991,c:"amex",d:TODAY,p:"AJAY",a:4225,io:"XFER_IN",r:"Pending draw: AMEX split",t:new Date().toISOString()});
@@ -1288,8 +1291,8 @@ export default function App(){
             {Object.entries(v.byCh).filter(([,a])=>a>0).map(([ch,a])=>(<span key={ch} style={{fontSize:9,color:CC[ch]||"#71717a",fontFamily:"monospace"}}>{CL[ch]||ch}: {FX(a)}</span>))}
           </div>
           <div style={{display:"flex",gap:6}}>
-            <button onClick={()=>{const gid=`CONV-XF-${Date.now()}`;const ne=[...entries,{id:Date.now(),c:"amex",d:TODAY,p,a:Math.round(bal*100)/100,io:"XFER_OUT",r:`Convention cash-out → Amex (full)`,grp:gid,conv:true,t:new Date().toISOString()},{id:Date.now()+1,c:"amex",d:TODAY,p,a:Math.round(bal*100)/100,io:"XFER_IN",r:`Convention cash-out ← Convention`,grp:gid,t:new Date().toISOString()}];sE(ne);sv(ne);tw(`✓ Cashed out ${FX(bal)} from ${p}'s convention → Amex`);}} style={{flex:1,padding:"8px 12px",borderRadius:6,border:"none",background:"#a78bfa",color:"#fafafa",cursor:"pointer",fontSize:11,fontWeight:700}}>Cash Out All ({FX(bal)})</button>
-            <button onClick={()=>{const amt=parseFloat(prompt(`Cash out ${p}?\nConvention balance: ${FX(bal)}\nEnter amount:`));if(!amt||isNaN(amt)||amt<=0||amt>bal)return;const gid=`CONV-XF-${Date.now()}`;const ne=[...entries,{id:Date.now(),c:"amex",d:TODAY,p,a:Math.round(amt*100)/100,io:"XFER_OUT",r:`Convention cash-out → Amex`,grp:gid,conv:true,t:new Date().toISOString()},{id:Date.now()+1,c:"amex",d:TODAY,p,a:Math.round(amt*100)/100,io:"XFER_IN",r:`Convention cash-out ← Convention`,grp:gid,t:new Date().toISOString()}];sE(ne);sv(ne);tw(`✓ Cashed out ${FX(amt)} from ${p}'s convention → Amex`);}} style={{flex:1,padding:"8px 12px",borderRadius:6,border:"1px solid #a78bfa40",background:"transparent",color:"#a78bfa",cursor:"pointer",fontSize:11,fontWeight:700}}>Custom Amount</button>
+            <button onClick={()=>{const others=Object.keys(balances).filter(x=>x!==p);const payerName=prompt(`Who is paying ${p}'s convention cash-out of ${FX(bal)}?\n\nOptions: ${others.join(", ")}`);if(!payerName)return;const payer=others.find(x=>x.toUpperCase()===payerName.trim().toUpperCase());if(!payer){tw("⚠ Invalid person");return;}const gid=`CONV-XF-${Date.now()}`;const a=Math.round(bal*100)/100;const ne=[...entries,{id:Date.now(),c:"amex",d:TODAY,p:payer,a,io:"XFER_OUT",r:`Convention payout to ${p}`,grp:gid,t:new Date().toISOString()},{id:Date.now()+1,c:"amex",d:TODAY,p,a,io:"XFER_IN",r:`Convention cash-out from ${payer}`,grp:gid,t:new Date().toISOString()},{id:Date.now()+2,c:"amex",d:TODAY,p,a,io:"XFER_OUT",r:`Convention balance cleared`,grp:gid,conv:true,t:new Date().toISOString()}];sE(ne);sv(ne);tw(`✓ ${payer} paid ${FX(bal)} to ${p} — convention balance cleared`);}} style={{flex:1,padding:"8px 12px",borderRadius:6,border:"none",background:"#a78bfa",color:"#fafafa",cursor:"pointer",fontSize:11,fontWeight:700}}>Cash Out All ({FX(bal)})</button>
+            <button onClick={()=>{const amt=parseFloat(prompt(`Cash out ${p}?\nConvention balance: ${FX(bal)}\nEnter amount:`));if(!amt||isNaN(amt)||amt<=0||amt>bal)return;const others=Object.keys(balances).filter(x=>x!==p);const payerName=prompt(`Who is paying ${FX(amt)} for ${p}?\n\nOptions: ${others.join(", ")}`);if(!payerName)return;const payer=others.find(x=>x.toUpperCase()===payerName.trim().toUpperCase());if(!payer){tw("⚠ Invalid person");return;}const gid=`CONV-XF-${Date.now()}`;const a=Math.round(amt*100)/100;const ne=[...entries,{id:Date.now(),c:"amex",d:TODAY,p:payer,a,io:"XFER_OUT",r:`Convention payout to ${p}`,grp:gid,t:new Date().toISOString()},{id:Date.now()+1,c:"amex",d:TODAY,p,a,io:"XFER_IN",r:`Convention cash-out from ${payer}`,grp:gid,t:new Date().toISOString()},{id:Date.now()+2,c:"amex",d:TODAY,p,a,io:"XFER_OUT",r:`Convention balance cleared`,grp:gid,conv:true,t:new Date().toISOString()}];sE(ne);sv(ne);tw(`✓ ${payer} paid ${FX(amt)} to ${p} — convention balance cleared`);}} style={{flex:1,padding:"8px 12px",borderRadius:6,border:"1px solid #a78bfa40",background:"transparent",color:"#a78bfa",cursor:"pointer",fontSize:11,fontWeight:700}}>Custom Amount</button>
           </div>
         </div>);})}
       </div>:<div style={{textAlign:"center",padding:30,color:"#52525b",fontSize:12}}>No convention balances to cash out.</div>}
@@ -1297,11 +1300,11 @@ export default function App(){
       {xfersOut.length>0&&<div style={{...cr,padding:0,overflow:"hidden",marginTop:10}}>
         <div style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.5)"}}><span style={{color:"#a78bfa",fontSize:10,fontWeight:600}}>CASH-OUT HISTORY</span></div>
         <div style={{maxHeight:250,overflowY:"auto"}}>
-          {xfersOut.sort((a,b)=>b.id-a.id).map(e=>(<div key={e.id} style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.3)",display:"flex",alignItems:"center",gap:8}}>
+          {xfersOut.sort((a,b)=>b.id-a.id).map(e=>{const payer=e.grp?entries.find(x=>x.grp===e.grp&&x.io==="XFER_OUT"&&!x.conv):null;return(<div key={e.id} style={{padding:"8px 16px",borderBottom:"1px solid rgba(63,63,70,.3)",display:"flex",alignItems:"center",gap:8}}>
             <span style={{color:CO[e.p]||"#888",fontSize:10,fontWeight:700,minWidth:48}}>{e.p}</span>
-            <div style={{flex:1}}><div style={{color:"#d4d4d8",fontSize:10}}>{e.r}</div><div style={{color:"#52525b",fontSize:9}}>{SD(e.d)}</div></div>
+            <div style={{flex:1}}><div style={{color:"#d4d4d8",fontSize:10}}>{e.r}</div>{payer&&<div style={{color:"#a78bfa",fontSize:9}}>paid by <span style={{color:CO[payer.p]||"#888",fontWeight:700}}>{payer.p}</span></div>}<div style={{color:"#52525b",fontSize:9}}>{SD(e.d)}</div></div>
             <span style={{color:"#a78bfa",fontFamily:"monospace",fontSize:11,fontWeight:700}}>-{FX(e.a)}</span>
-          </div>))}
+          </div>);})}
         </div>
       </div>}
     </>);
