@@ -294,6 +294,10 @@ export default function App(){
       if((e.r||"").startsWith("PAYOUT:")&&e.io==="OUT"){e.io="PYOUT";migFixed=true;}
     });
     if(migFixed){try{(() => { try { localStorage.setItem("ub-e3", JSON.stringify(p)); return { value: JSON.stringify(p) }; } catch(e) { return null; } })();}catch(e){}}
+    // Migration: fix shopify entries that have c:"shopify" → should be c:"amex" (or c:"cash" if payment was cash)
+    let shopFix=false;
+    p.forEach(e=>{if(e.c==="shopify"){e.c="amex";shopFix=true;}});
+    if(shopFix){try{(() => { try { localStorage.setItem("ub-e3", JSON.stringify(p)); return { value: JSON.stringify(p) }; } catch(e) { return null; } })();}catch(e){}}
     // One-time: add $4225 pending draw for AJAY and DEREK
     if(!p.find(e=>e.r==="Pending draw: AMEX split"&&e.p==="AJAY")){
       p.push({id:Date.now()+.991,c:"amex",d:TODAY,p:"AJAY",a:4225,io:"XFER_IN",r:"Pending draw: AMEX split",t:new Date().toISOString()});
@@ -301,7 +305,7 @@ export default function App(){
       try{(() => { try { localStorage.setItem("ub-e3", JSON.stringify(p)); return { value: JSON.stringify(p) }; } catch(e) { return null; } })();}catch(e){}
     }
     sE(p);
-    const nd={...S_ALL},nc={...S_C_NET};p.forEach(e=>{if(e.io==="IN"||e.io==="CONSIGNMENT"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}});
+    const nd={...S_ALL},nc={...S_C_NET};p.filter(e=>!e.conv).forEach(e=>{if(e.io==="IN"||e.io==="CONSIGNMENT"){if(!nd[e.d])nd[e.d]={};nd[e.d][e.p]=(nd[e.d][e.p]||0)+e.a;if(!nc[e.d])nc[e.d]={};nc[e.d][e.c]=(nc[e.d][e.c]||0)+e.a;}});
     sDD({...nd});sCD({...nc});}}catch(e){}
     // Load bank txns from local
     try{const r2=(() => { try { const v = localStorage.getItem("ub-bank"); return v ? { value: v } : null; } catch(e) { return null; } })();if(r2?.value)sBankTxns(JSON.parse(r2.value));}catch(e){}
@@ -2020,7 +2024,7 @@ export default function App(){
     const qWords=isExact?null:q.split(/\s+/).filter(Boolean);
     const matchQ=(e)=>{const hay=[(e.r||""),(e.p||""),(e.ord||""),(e.io||""),String(e.a)].join(" ").toLowerCase();if(isExact)return hay.includes(q);return qWords.every(w=>hay.includes(w));};
     const filtered=entries.filter(e=>{
-      if(logCh!=="all"&&!(e.c===logCh||(logCh==="square"&&e.src==="square")||(logCh==="discord"&&e.src==="discord")))return false;
+      if(logCh!=="all"&&!(e.c===logCh||(logCh==="square"&&e.src==="square")||(logCh==="discord"&&e.src==="discord")||(logCh==="unboxed"&&e.src==="unboxed")||(logCh==="shopify"&&e.src==="shopify")))return false;
       if(logP!=="all"&&e.p!==logP)return false;
       if(logIO==="in"&&!(e.io==="IN"||e.io==="CONSIGNMENT"||e.io==="TRADE_IN"||e.io==="XFER_IN"))return false;
       if(logIO==="out"&&(e.io==="IN"||e.io==="CONSIGNMENT"||e.io==="TRADE_IN"||e.io==="XFER_IN"||e.io==="REFUND"))return false;
@@ -2054,12 +2058,29 @@ export default function App(){
             sDD({...nd});sCD({...nc});tw(`✓ Deleted ${logSel.size} entries`);sLogSel(new Set());sLogSelMode(false);}} style={{padding:"3px 10px",borderRadius:4,border:"none",background:"#ef4444",color:"#fafafa",cursor:"pointer",fontSize:9,fontWeight:700}}>Delete {logSel.size} selected</button>}
         </div>}
         <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
-          {["all","shopify","square","cash","amex","venmo","zelle","discord"].map(k=>(<button key={k} onClick={()=>sLogCh(k)} style={{padding:"3px 8px",borderRadius:4,border:"none",background:logCh===k?"#3f3f46":"transparent",color:logCh===k?(k==="all"?"#fff":k==="discord"?"#7c3aed":CC[k]||"#71717a"):"#444",cursor:"pointer",fontSize:9,fontWeight:600}}>{k==="all"?"All":k==="discord"?"📋 Discord":CL[k]||k}</button>))}
+          {["all","shopify","square","cash","amex","venmo","zelle","unboxed","discord"].map(k=>(<button key={k} onClick={()=>sLogCh(k)} style={{padding:"3px 8px",borderRadius:4,border:"none",background:logCh===k?"#3f3f46":"transparent",color:logCh===k?(k==="all"?"#fff":k==="discord"?"#7c3aed":k==="unboxed"?"#f97316":CC[k]||"#71717a"):"#444",cursor:"pointer",fontSize:9,fontWeight:600}}>{k==="all"?"All":k==="discord"?"📋 Discord":k==="unboxed"?"📦 Unboxed":CL[k]||k}</button>))}
         </div>
         {logCh==="discord"&&filtered.length>0&&!logSelMode&&<div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8,padding:"6px 10px",borderRadius:6,border:"1px solid #7c3aed30",background:"rgba(124,58,237,.06)"}}>
           <span style={{color:"#7c3aed",fontSize:10,fontWeight:600,flex:1}}>📋 {filtered.length} Discord entries</span>
           <button onClick={()=>{sLogSelMode(true);const ids=new Set(filtered.map(e=>e.id));sLogSel(ids);}} style={{padding:"4px 10px",borderRadius:5,border:"none",background:"#7c3aed",color:"#fafafa",cursor:"pointer",fontSize:9,fontWeight:700}}>Select All</button>
         </div>}
+        {!logSelMode&&(()=>{const imports={};entries.forEach(e=>{if(!e.src)return;const k=`${e.src}|${e.d}`;if(!imports[k])imports[k]={src:e.src,d:e.d,ids:[],total:0};imports[k].ids.push(e.id);imports[k].total+=e.a;});
+          const groups=Object.values(imports).sort((a,b)=>b.d.localeCompare(a.d)||b.ids.length-a.ids.length);
+          if(!groups.length)return null;
+          const srcC={shopify:"#96bf48",square:"#555d63",discord:"#7c3aed",unboxed:"#f97316"};
+          return<details style={{marginBottom:8}}><summary style={{color:"#71717a",fontSize:10,fontWeight:600,cursor:"pointer",userSelect:"none"}}>📦 Import History ({groups.length} batches)</summary>
+            <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:4}}>
+              {groups.map(g=>{const c=srcC[g.src]||"#71717a";return<div key={`${g.src}|${g.d}`} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",borderRadius:6,border:`1px solid ${c}30`,background:`${c}06`}}>
+                <span style={{color:c,fontSize:9,fontWeight:700,textTransform:"uppercase",minWidth:55}}>{g.src}</span>
+                <span style={{color:"#a1a1aa",fontSize:9}}>{SD(g.d)}</span>
+                <span style={{color:"#71717a",fontSize:9}}>{g.ids.length} entries</span>
+                <span style={{color:"#fafafa",fontFamily:"monospace",fontSize:10,fontWeight:700}}>{FX(g.total)}</span>
+                <button onClick={()=>{if(!confirm(`Delete ${g.ids.length} ${g.src} entries from ${SD(g.d)}? (${FX(g.total)})`))return;const idSet=new Set(g.ids);const ne=entries.filter(x=>!idSet.has(x.id));sE(ne);sv(ne);
+                  const nd={...S_ALL},nc={...S_C_NET};ne.filter(x=>!x.conv).forEach(x=>{if(x.io==="IN"||x.io==="CONSIGNMENT"){if(!nd[x.d])nd[x.d]={};nd[x.d][x.p]=(nd[x.d][x.p]||0)+x.a;if(!nc[x.d])nc[x.d]={};nc[x.d][x.c]=(nc[x.d][x.c]||0)+x.a;}});
+                  sDD({...nd});sCD({...nc});tw(`✓ Deleted ${g.ids.length} ${g.src} entries from ${SD(g.d)}`);}} style={{marginLeft:"auto",padding:"3px 10px",borderRadius:4,border:"1px solid #ef444440",background:"rgba(239,68,68,.08)",color:"#ef4444",cursor:"pointer",fontSize:9,fontWeight:700}}>Delete</button>
+              </div>;})}
+            </div>
+          </details>;})()}
         <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
           <button onClick={()=>sLogP("all")} style={{padding:"3px 8px",borderRadius:4,border:"none",background:logP==="all"?"#3f3f46":"transparent",color:logP==="all"?"#fff":"#444",cursor:"pointer",fontSize:9,fontWeight:600}}>All</button>
           {logPeople.map(p=>(<button key={p} onClick={()=>sLogP(p)} style={{padding:"3px 8px",borderRadius:4,border:"none",background:logP===p?`${CO[p]}20`:"transparent",color:logP===p?CO[p]:"#444",cursor:"pointer",fontSize:9,fontWeight:600}}>{p}</button>))}
