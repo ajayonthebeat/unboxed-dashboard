@@ -447,7 +447,7 @@ export default function App(){
       // Determine actual payment channel from payment method
       const pmUp=(it.pm||"").toUpperCase();
       // For non-split: detect channel from payment method
-      const actualCh=ch==="cash"?"cash":ch==="amex"?"amex":ch==="shopify"?(pmUp.includes("CASH")?"cash":pmUp.includes("AMEX")||pmUp.includes("AMERICAN EXPRESS")?"amex":"shopify"):"amex";
+      const actualCh=ch==="cash"?"cash":ch==="amex"?"amex":ch==="shopify"?(pmUp.includes("CASH")?"cash":"amex"):"amex";
       // For split payments, detect what each split portion is
       // Parse payment methods to figure out cash vs card vs amex
       const pmParts=pmUp.split("+").map(s=>s.trim());
@@ -458,7 +458,7 @@ export default function App(){
       const cashSplitCh="cash";
       // Trade credit is NOT real money — it's store credit
       // Shopify portion channel: if amex is in the mix use amex, otherwise shopify
-      const shopSplitCh=hasAmexPM?"amex":"shopify";
+      const shopSplitCh="amex";
 
       // For each payment portion (shop, cash, trade)
       const portions=[
