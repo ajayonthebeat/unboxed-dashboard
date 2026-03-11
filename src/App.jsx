@@ -1241,8 +1241,18 @@ export default function App(){
       </div>}
     </>);
 
-    if(sec==="conv-balances")return(<>
+    if(sec==="conv-balances"){
+      const chSums={};allTimePpl.forEach(([,v])=>{Object.entries(v.byCh).forEach(([ch,a])=>{chSums[ch]=(chSums[ch]||0)+a;});});
+      const chCards=[["venmo","Venmo","#008CFF"],["zelle","Zelle","#6D1ED4"],["cash","Cash","#22c55e"],["amex","Amex","#3b82f6"]].filter(([k])=>chSums[k]);
+      return(<>
       <div style={{color:"#f97316",fontSize:12,fontWeight:800,marginBottom:10}}>🎪 CONVENTION BALANCES (ALL TIME)</div>
+      {chCards.length>0&&<div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(chCards.length,4)},1fr)`,gap:8,marginBottom:12}}>
+        {chCards.map(([k,l,c])=>(<div key={k} style={{...cr,borderTop:`3px solid ${c}`,padding:"10px 12px"}}>
+          <div style={{color:c,fontSize:10,fontWeight:700}}>{l}</div>
+          <div style={{color:"#fafafa",fontSize:18,fontWeight:800,fontFamily:"monospace"}}>{FX(chSums[k])}</div>
+          <div style={{color:"#52525b",fontSize:9,marginTop:2}}>{allTimePpl.filter(([,v])=>(v.byCh[k]||0)!==0).map(([p,v])=>`${p}: ${FX(v.byCh[k])}`).join(" · ")}</div>
+        </div>))}
+      </div>}
       {allTimePpl.length>0?<div style={{display:"grid",gridTemplateColumns:`repeat(${Math.min(allTimePpl.length,2)},1fr)`,gap:10}}>
         {allTimePpl.map(([p,v])=>{const bal=v.total;return(<div key={p} style={{...cr,padding:"14px 16px",borderTop:`3px solid ${CO[p]||"#888"}`}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
@@ -1258,7 +1268,7 @@ export default function App(){
           {bal>0&&<button onClick={()=>{sSEC("conv-cashout");}} style={{padding:"6px 12px",borderRadius:6,border:"1px solid #a78bfa40",background:"rgba(167,139,250,.1)",color:"#a78bfa",cursor:"pointer",fontSize:10,fontWeight:700,width:"100%"}}>💸 Cash Out</button>}
         </div>);})}
       </div>:<div style={{textAlign:"center",padding:30,color:"#52525b",fontSize:12}}>No convention balances yet.</div>}
-    </>);
+    </>);}
 
     if(sec==="conv-sales")return(<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:10}}>
