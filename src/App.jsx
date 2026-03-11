@@ -294,10 +294,12 @@ export default function App(){
       if((e.r||"").startsWith("PAYOUT:")&&e.io==="OUT"){e.io="PYOUT";migFixed=true;}
     });
     if(migFixed){try{(() => { try { localStorage.setItem("ub-e3", JSON.stringify(p)); return { value: JSON.stringify(p) }; } catch(e) { return null; } })();}catch(e){}}
-    // Migration: fix shopify entries that have c:"shopify" → should be c:"amex" (or c:"cash" if payment was cash)
-    let shopFix=false;
-    p.forEach(e=>{if(e.c==="shopify"){e.c="amex";shopFix=true;}});
-    if(shopFix){try{(() => { try { localStorage.setItem("ub-e3", JSON.stringify(p)); return { value: JSON.stringify(p) }; } catch(e) { return null; } })();}catch(e){}}
+    // Revert: undo the shopify→amex migration that incorrectly changed old entries
+    if(!localStorage.getItem("ub-shopRevert1")){
+      let ct=0;p.forEach(e=>{if(e.src==="shopify"&&e.c==="amex"){e.c="shopify";ct++;}});
+      localStorage.setItem("ub-shopRevert1","1");
+      if(ct>0){try{(() => { try { localStorage.setItem("ub-e3", JSON.stringify(p)); return { value: JSON.stringify(p) }; } catch(e) { return null; } })();}catch(e){}}
+    }
     // One-time: add $4225 pending draw for AJAY and DEREK
     if(!p.find(e=>e.r==="Pending draw: AMEX split"&&e.p==="AJAY")){
       p.push({id:Date.now()+.991,c:"amex",d:TODAY,p:"AJAY",a:4225,io:"XFER_IN",r:"Pending draw: AMEX split",t:new Date().toISOString()});
