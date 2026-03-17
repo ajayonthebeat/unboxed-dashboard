@@ -90,6 +90,9 @@ function parseUnboxedCSV(t){const{data:rows}=Papa.parse(t,{header:true,skipEmpty
           else if(pl.includes("zelle")){ch="zelle";const w=part.split(/\s+/).filter(x=>!/zelle|platform:|convention/i.test(x));if(w.length)rcvdBy=w[0].toUpperCase();}
           else if((pl==="cash"||pl.startsWith("cash "))&&!pl.includes("platform")){ch="cash";const w=part.split(/\s+/).filter(x=>!/cash|platform:/i.test(x));if(w.length)rcvdBy=w[0].toUpperCase();}
         }}
+      // Parse "via venmo (ajay's account)" / "via zelle (derek's account)" format
+      if(isConv&&!rcvdBy){const acctMatch=notesLow.match(/via\s+(venmo|zelle)\s+\((\w+)'s\s+account\)/);
+        if(acctMatch){ch=acctMatch[1];rcvdBy=acctMatch[2].toUpperCase();}}
       const saleType=isConv?"convention":source==="Private Sale"?"private":source==="In-Store"?"pos":"pos";
       const fl=[];if(payMethod==="split_cash_card")fl.push("split_pay");if(owner==="UNKNOWN")fl.push("unknown");
       items.push({id:items.length,date,name:itemName||`Sale #${txnId}`,amt,owner,fl,order:`UB-${txnId}`,device:"",ch,staff,notes,saleType,source,itemCount:qty,timestamp:`${date} ${time}`,rcvdBy:rcvdBy||undefined});}
